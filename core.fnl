@@ -1,4 +1,6 @@
 (local repl (require "lib.repl"))
+(local units (require "units"))
+(local draw (require "draw"))
 
 (local canvas (love.graphics.newCanvas 1024 768))
 
@@ -10,6 +12,7 @@
   (love.graphics.setCanvas canvas)
   (love.graphics.clear)
   (love.graphics.setColor 1 1 1)
+  (draw.object units.dragster [0 1 0] [1 1])
   (love.graphics.setCanvas)
   (love.graphics.setColor 1 1 1)
   (love.graphics.draw canvas 0 0 0 1 1))
