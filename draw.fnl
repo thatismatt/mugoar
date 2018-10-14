@@ -28,4 +28,8 @@
                                     cx cy rx ry
                                     12)))))))
 
+(fn draw.entity [state e]
+  (let [(x y) (: state.world :getRect e)]
+    (draw.object e.unit e.colour [x y])))
+
 draw
