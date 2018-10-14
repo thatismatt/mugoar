@@ -4,13 +4,18 @@
 (local draw (require "draw"))
 (local world (require "world"))
 
-(local canvas (love.graphics.newCanvas 1024 768))
+(local canvas
+  (love.graphics.newCanvas 1024 768))
 
-(local state {:world (bump.newWorld)
-              :entities {}})
+(local state
+  {:world (bump.newWorld)
+   :entities {}
+   :debug {:draw-bounding-box? false}})
 
-(world.add state :a {:unit units.dragster :colour [0.8 0 0.6] :heading 0 :speed 2} [4 4] [1 1])
-(world.add state :b {:unit units.dragster :colour [0 0.7 0.3] :heading 0 :speed 2} [5 6] [1 1])
+(world.add state :a {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 2} [4 4])
+(world.add state :b {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 2} [5 6])
+(world.add state :f {:unit :factory  :colour [0 0.7 0.3] :heading 0 :speed 0} [3 3])
+(world.add state :g {:unit :factory  :colour [0.8 0 0.6] :heading 0 :speed 0} [1 1])
 
 (fn love.load []
   (: canvas :setFilter "nearest" "nearest")

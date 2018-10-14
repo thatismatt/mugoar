@@ -1,8 +1,11 @@
+(local units (require "units"))
+
 (local world {})
 
-(fn world.add [state id entity coords size]
+(fn world.add [state id entity coords]
   (let [[x y] coords
-        [w h] size]
+        unit (. units entity.unit)
+        [w h] unit.size]
     (: state.world :add entity x y w h)
     (tset state.entities id entity)))
 
