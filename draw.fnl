@@ -3,6 +3,15 @@
 
 (local draw {})
 
+(fn draw.map [state]
+  (love.graphics.setLineWidth 0.05)
+  (for [i 0 state.world.w]
+    (love.graphics.setColor [0.3 0.7 1 (if (= (% i 10) 0) 0.8 0.4)])
+    (love.graphics.line i 0 i state.world.h))
+  (for [i 0 state.world.h]
+    (love.graphics.setColor [0.3 0.7 1 (if (= (% i 10) 0) 0.8 0.4)])
+    (love.graphics.line 0 i state.world.w i)))
+
 (fn draw.object [state unit colour coord]
   (love.graphics.setColor colour)
   (let [[x y] coord

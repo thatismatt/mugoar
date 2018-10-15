@@ -30,6 +30,7 @@
   (: state.camera.main :draw
      (fn [l t w h]
        ;; TODO: only draw what is visible
+       (draw.map state)
        (draw.entities state)))
   (love.graphics.setCanvas)
   (love.graphics.setColor 1 1 1)
