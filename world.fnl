@@ -21,6 +21,11 @@
     (: state.world.physics :add entity x y w h)
     (tset state.entities id entity)))
 
+(fn world.remove [state id]
+  (let [entity (. state.entities id)]
+    (tset state.entities id nil)
+    (: state.world.physics :remove entity)))
+
 (fn world.move [state dt entity on-collide]
   (let [(x y) (: state.world.physics :getRect entity)
         new-x (+ x (* (math.cos entity.heading) entity.speed dt))
