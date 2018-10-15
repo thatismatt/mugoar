@@ -1,4 +1,5 @@
 (local units (require "units"))
+(local utils (require "utils"))
 (local bump (require "lib.bump"))
 
 (local world {})
@@ -14,12 +15,13 @@
      :w w
      :h h}))
 
-(fn world.add [state id entity coords]
+(fn world.add [state entity coords]
+  (set entity.id (.. entity.unit "-" (utils.random-string 10)))
   (let [[x y] coords
         unit (. units entity.unit)
         [w h] unit.size]
     (: state.world.physics :add entity x y w h)
-    (tset state.entities id entity)))
+    (tset state.entities entity.id entity)))
 
 (fn world.remove [state id]
   (let [entity (. state.entities id)]

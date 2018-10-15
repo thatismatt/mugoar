@@ -14,10 +14,10 @@
      :entities {}
      :debug {:draw-bounding-box? false}}))
 
-(world.add state :a {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 2} [4 4])
-(world.add state :b {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 2} [5 6])
-(world.add state :f {:unit :factory  :colour [0 0.7 0.3] :heading 0 :speed 0} [3 3])
-(world.add state :g {:unit :factory  :colour [0.8 0 0.6] :heading 0 :speed 0} [1 1])
+(world.add state {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 2} [4 4])
+(world.add state {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 2} [5 6])
+(world.add state {:unit :factory  :colour [0 0.7 0.3] :heading 0 :speed 0} [3 2])
+(world.add state {:unit :factory  :colour [0.8 0 0.6] :heading 0 :speed 0} [1 1])
 
 (fn love.load []
   (: canvas :setFilter "nearest" "nearest")
@@ -40,8 +40,9 @@
 
 (fn love.update [dt]
   (set elapsed-time (+ elapsed-time dt))
-  (set state.entities.a.heading (+ state.entities.a.heading dt)) ;; send a in a circle
-  (set state.entities.b.heading (if (> (math.cos (/ elapsed-time 2)) 0) 0 math.pi)) ;; send b back and forth
+  (let [[a b] (lume.filter state.entities (fn [e] (= e.unit :dragster)))]
+    (set a.heading (+ a.heading dt)) ;; send a in a circle
+    (set b.heading (if (> (math.cos (/ elapsed-time 2)) 0) 0 math.pi))) ;; send b back and forth
   (if (love.keyboard.isDown "=")     (camera.zoom state dt :in)
       (love.keyboard.isDown "-")     (camera.zoom state dt :out))
   (if (love.keyboard.isDown "up")    (camera.move state dt :up)
