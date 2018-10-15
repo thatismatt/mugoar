@@ -4,9 +4,15 @@
 (local world {})
 
 (fn world.new [w h]
-  {:physics (bump.newWorld)
-   :w w
-   :h h})
+  (let [world (bump.newWorld)]
+    ;; world edges
+    (: world :add {} -1 -1 1 (+ h 2)) ;; left
+    (: world :add {}  w -1 1 (+ h 2)) ;; right
+    (: world :add {} -1 -1 (+ w 2) 1) ;; top
+    (: world :add {} -1  h (+ w 2) 1) ;; bottom
+    {:physics world
+     :w w
+     :h h}))
 
 (fn world.add [state id entity coords]
   (let [[x y] coords
