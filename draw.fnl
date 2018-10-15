@@ -37,13 +37,11 @@
                                     cx cy rx ry
                                     12)))))))
 
-(fn draw.entity [state entity]
-  (draw.object state
-               (. units entity.unit)
-               entity.colour
-               (world.position state entity)))
-
 (fn draw.entities [state]
-  (lume.map state.entities (partial draw.entity state)))
+  (-> state.entities
+      (lume.map (fn [e] {:entity e
+                         :position (world.position state e)}))
+      (lume.sort (fn [x] (-> x.position (. 2) (* -1))))
+      (lume.map (fn [x] (draw.object state (. units x.entity.unit) x.entity.colour x.position)))))
 
 draw
