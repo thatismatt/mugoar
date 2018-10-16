@@ -26,4 +26,7 @@
               (= dir :down)  [x (+ y (* 12 dt))])]
     (: state.camera.main :setPosition (unpack p))))
 
+(fn camera.position [state position]
+  (: state.camera.main :setPosition (unpack position)))
+
 camera

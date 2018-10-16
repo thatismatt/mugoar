@@ -14,10 +14,13 @@
      :entities {}
      :debug {:draw-bounding-box? false}}))
 
-(world.add state {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 2} [4 4])
-(world.add state {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 2} [5 6])
-(world.add state {:unit :factory  :colour [0 0.7 0.3] :heading 0 :speed 0} [3 2])
-(world.add state {:unit :factory  :colour [0.8 0 0.6] :heading 0 :speed 0} [1 1])
+(let [w/2 (/ state.world.w 2)
+      h/2 (/ state.world.h 2)]
+  (world.add state {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 2} [(+ w/2 4) (+ h/2 4)])
+  (world.add state {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 2} [(+ w/2 5) (+ h/2 6)])
+  (world.add state {:unit :factory  :colour [0 0.7 0.3] :heading 0 :speed 0} [(+ w/2 3) (+ h/2 2)])
+  (world.add state {:unit :factory  :colour [0.8 0 0.6] :heading 0 :speed 0} [(+ w/2 1) (+ h/2 1)])
+  (camera.position state [(+ w/2 5) (+ h/2 5)]))
 
 (fn love.load []
   (: canvas :setFilter "nearest" "nearest")
