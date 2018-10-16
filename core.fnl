@@ -12,6 +12,7 @@
     {:world world
      :camera {:main (camera.new world)}
      :entities {}
+     :selection {}
      :debug {:draw-bounding-box? false}}))
 
 (let [w/2 (/ state.world.w 2)
@@ -59,3 +60,16 @@
           (and (love.keyboard.isDown "lctrl" "rctrl" "capslock")
                (= key "q")))
       (love.event.quit)))
+
+(fn love.mousepressed [x y button]
+  (if (= button 1)
+      (let [[wx wy] [(: state.camera.main :toWorld x y)]
+            selected (: state.world.physics :queryRect (- wx 0.2) (- wy 0.2) 0.4 0.4)]
+        (set state.selection (-> selected
+                                 (lume.filter :id) ;; remove non id-ed "rects" i.e. world edges
+                                 (lume.reduce (fn [a e] (tset a e.id true) a) {}))))))
+
+;; TODO: handle click & drag selection
+;; (fn love.mousereleased [x y button]
+;;   (if (= button 1) left-click-release
+;;       (= button 2) right-click-release))
