@@ -13,7 +13,8 @@
      :camera {:main (camera.new world)}
      :entities {}
      :selection {}
-     :debug {:draw-bounding-box? false}}))
+     :debug {:draw-bounding-box? false
+             :draw-fps? false}}))
 
 (let [w/2 (/ state.world.w 2)
       h/2 (/ state.world.h 2)]
@@ -36,6 +37,9 @@
        ;; TODO: only draw what is visible
        (draw.map state)
        (draw.entities state)))
+  (when state.debug.draw-fps?
+    (love.graphics.setColor [1 1 1])
+    (love.graphics.print (tostring (love.timer.getFPS)) 10 10))
   (love.graphics.setCanvas)
   (love.graphics.setColor 1 1 1)
   (love.graphics.draw canvas 0 0 0 1 1))
