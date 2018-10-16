@@ -34,6 +34,11 @@
         new-y (+ y (* (math.sin entity.heading) entity.speed dt))]
     (: state.world.physics :move entity new-x new-y on-collide)))
 
+(fn world.move-entities [state dt]
+  (-> state.entities
+      (lume.filter :speed)
+      (lume.map (fn [e] (world.move state dt e (fn [x y] :slide))))))
+
 (fn world.position [state entity]
   [(: state.world.physics :getRect entity)])
 
