@@ -6,9 +6,11 @@
   (let [c (gamera.new 0 0 world.w world.h)]
     (: c :setScale 64)
     (: c :setPosition 0 0)
-    ;; TODO: determine amount of window to use
-    ;; (: c :setWindow 0 0 500 500)
     c))
+
+(fn camera.window [state]
+  ;; TODO: determine amount of window to use
+  (: state.camera.main :setWindow 0 0 state.window.w state.window.h))
 
 (fn camera.zoom [state dt dir]
   (let [scale-factor (if (= dir :in)   32

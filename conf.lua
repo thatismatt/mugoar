@@ -3,5 +3,6 @@ love.conf = function(t)
    t.modules.joystick, t.modules.physics = false, false
    t.window.width, t.window.height = 1024, 768
    t.window.vsync = false
+   t.window.resizable = true
    t.version = "11.1"
 end

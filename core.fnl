@@ -4,12 +4,10 @@
 (local world (require "world"))
 (local camera (require "camera"))
 
-(local canvas
-  (love.graphics.newCanvas 1024 768))
-
 (local state
   (let [world (world.new 50 50)]
     {:world world
+     :window {:w 1024 :h 768}
      :camera {:main (camera.new world)}
      :entities {}
      :selection {}
@@ -24,12 +22,17 @@
   (world.add state {:unit :factory  :colour [0.8 0 0.6]} [(+ w/2 1) (+ h/2 1)])
   (camera.position state [(+ w/2 5) (+ h/2 5)]))
 
+(fn window-resize [w h]
+  (set state.window {:w w :h h})
+  (set state.canvas (love.graphics.newCanvas state.window.w state.window.h))
+  (camera.window state))
+
 (fn love.load []
-  (: canvas :setFilter "nearest" "nearest")
+  (window-resize (love.graphics.getWidth) (love.graphics.getHeight))
   (repl.start))
 
 (fn love.draw []
-  (love.graphics.setCanvas canvas)
+  (love.graphics.setCanvas state.canvas)
   (love.graphics.clear)
   (love.graphics.setColor 1 1 1)
   (: state.camera.main :draw
@@ -42,7 +45,7 @@
     (love.graphics.print (tostring (love.timer.getFPS)) 10 10))
   (love.graphics.setCanvas)
   (love.graphics.setColor 1 1 1)
-  (love.graphics.draw canvas 0 0 0 1 1))
+  (love.graphics.draw state.canvas 0 0 0 1 1))
 
 (var elapsed-time 0)
 
@@ -58,6 +61,9 @@
   (if (love.keyboard.isDown "left")  (camera.move state dt :left)
       (love.keyboard.isDown "right") (camera.move state dt :right))
   (world.move-entities state dt))
+
+(fn love.resize [w h]
+  (window-resize w h))
 
 (fn love.keypressed [key]
   (if (or (= key "escape")
