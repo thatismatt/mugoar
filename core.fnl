@@ -69,7 +69,9 @@
   (if (or (= key "escape")
           (and (love.keyboard.isDown "lctrl" "rctrl" "capslock")
                (= key "q")))
-      (love.event.quit)))
+      (love.event.quit)
+      (= key "f11")
+      (love.window.setFullscreen (not (love.window.getFullscreen)))))
 
 (fn love.mousepressed [x y button]
   (if (= button 1)
