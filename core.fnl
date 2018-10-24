@@ -7,7 +7,6 @@
 (local state
   (let [world (world.new 50 50)]
     {:world world
-     :window {:w 1024 :h 768}
      :camera {:main (camera.new world)}
      :entities {}
      :selection {}
@@ -27,8 +26,10 @@
   (set state.canvas (love.graphics.newCanvas state.window.w state.window.h))
   (camera.window state))
 
+;; required for dynamic reloading of fennel modules
+(window-resize (love.graphics.getWidth) (love.graphics.getHeight))
+
 (fn love.load []
-  (window-resize (love.graphics.getWidth) (love.graphics.getHeight))
   (repl.start))
 
 (fn love.draw []
