@@ -50,4 +50,60 @@
       (lume.sort (fn [x] (-> x.position (. 2) (* -1))))
       (lume.map (fn [x] (draw.object state (. units x.entity.unit) x.entity.colour x.position x.selected?)))))
 
+(fn draw.hud [state]
+  ;; draw background
+  (love.graphics.setColor [1 1 1 0.4])
+  (love.graphics.polygon :fill [0 0
+                                state.hud.w 0
+                                state.hud.w state.window.h
+                                0 state.window.h])
+  (let [padding 10
+        entity-id (-> state.selection (lume.keys) (lume.first))]
+    (when entity-id
+      (let [entity (. state.entities entity-id)
+            unit (. units entity.unit)
+            [uw uh] unit.size
+            scale (/ (- state.hud.w (* 2 padding)) 4)]
+        ;; draw unit name
+        (love.graphics.setFont (love.graphics.newFont 36))
+        (love.graphics.setColor [1 1 1])
+        (love.graphics.print entity.unit
+                             padding
+                             (+ padding 100 scale))
+        ;; draw unit
+        (love.graphics.push)
+        (love.graphics.translate (+ padding
+                                    (* (- 2 (/ uw 2)) scale)) ;; center the unit
+                                 100) ;; HACK: account for units that exceed their bbox
+        (love.graphics.scale scale)
+        (draw.object state unit entity.colour [0 0] false)
+        (love.graphics.pop)))))
+
+(fn draw.draw [state]
+  ;; draw map canvas
+  (love.graphics.setCanvas state.layers.map)
+  (love.graphics.clear)
+  (: state.camera.main :draw
+     (fn [l t w h]
+       ;; TODO: only draw what is visible
+       (draw.map state)
+       (draw.entities state)))
+  ;; draw hud canvas
+  (love.graphics.setCanvas state.layers.hud)
+  (love.graphics.clear)
+  (draw.hud state)
+  (when state.debug.draw-fps?
+    (love.graphics.setColor [1 1 1])
+    (love.graphics.print (tostring (love.timer.getFPS)) 10 10))
+  ;; draw canvases to screen
+  (love.graphics.setCanvas)
+  (love.graphics.setColor 1 1 1)
+  (love.graphics.draw state.layers.map 0 0 0 1 1)
+  (love.graphics.draw state.layers.hud (- state.window.w state.hud.w)
+                      0 0 1 1))
+
+(fn draw.resize [state]
+  (set state.layers {:map (love.graphics.newCanvas state.window.w state.window.h)
+                     :hud (love.graphics.newCanvas state.hud.w state.window.h)}))
+
 draw

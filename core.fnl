@@ -10,6 +10,7 @@
      :camera {:main (camera.new world)}
      :entities {} ;; entity-id -> entity
      :selection {} ;; entity-id -> true (i.e. a set)
+     :hud {:w 400}
      :debug {:draw-bounding-box? false
              :draw-fps? false}}))
 
@@ -22,7 +23,7 @@
 
 (fn window-resize [state w h]
   (set state.window {:w w :h h})
-  (set state.canvas (love.graphics.newCanvas state.window.w state.window.h))
+  (draw.resize state)
   (camera.window state))
 
 ;; required for dynamic reloading of fennel modules
@@ -32,20 +33,7 @@
   (repl.start))
 
 (fn love.draw []
-  (love.graphics.setCanvas state.canvas)
-  (love.graphics.clear)
-  (love.graphics.setColor 1 1 1)
-  (: state.camera.main :draw
-     (fn [l t w h]
-       ;; TODO: only draw what is visible
-       (draw.map state)
-       (draw.entities state)))
-  (when state.debug.draw-fps?
-    (love.graphics.setColor [1 1 1])
-    (love.graphics.print (tostring (love.timer.getFPS)) 10 10))
-  (love.graphics.setCanvas)
-  (love.graphics.setColor 1 1 1)
-  (love.graphics.draw state.canvas 0 0 0 1 1))
+  (draw.draw state))
 
 (var elapsed-time 0)
 
