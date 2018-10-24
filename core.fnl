@@ -8,8 +8,8 @@
   (let [world (world.new 50 50)]
     {:world world
      :camera {:main (camera.new world)}
-     :entities {}
-     :selection {}
+     :entities {} ;; entity-id -> entity
+     :selection {} ;; entity-id -> true (i.e. a set)
      :debug {:draw-bounding-box? false
              :draw-fps? false}}))
 
