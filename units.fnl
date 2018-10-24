@@ -22,4 +22,13 @@
                 :pts [[2.8 -0.3] [2.8 0.2] [2 0.2]]}]
       :size [3 1]})
 
+(set units.barracks
+     {:shapes [{:shape :polygon
+                :pts [[0.2 0.2] [1.8 0.2] [1.8 0.8] [0.2 0.8]]}
+               {:shape :polygon
+                :pts [[0.2 -0.1] [1 0.2] [0.2 0.2]]}
+               {:shape :polygon
+                :pts [[1 -0.1] [1.8 0.2] [1 0.2]]}]
+      :size [2 1]})
+
 units
