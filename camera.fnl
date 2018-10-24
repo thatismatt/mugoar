@@ -5,7 +5,6 @@
 (fn camera.new [world]
   (let [c (gamera.new 0 0 world.w world.h)]
     (: c :setScale 64)
-    (: c :setPosition 0 0)
     c))
 
 (fn camera.window [state]
