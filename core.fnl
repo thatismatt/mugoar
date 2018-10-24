@@ -20,13 +20,13 @@
   (world.add state {:unit :factory  :colour [0 0.7 0.3]} [(+ w/2 3) (+ h/2 2)])
   (world.add state {:unit :barracks :colour [0.8 0 0.6]} [(+ w/2 1) (+ h/2 1)]))
 
-(fn window-resize [w h]
+(fn window-resize [state w h]
   (set state.window {:w w :h h})
   (set state.canvas (love.graphics.newCanvas state.window.w state.window.h))
   (camera.window state))
 
 ;; required for dynamic reloading of fennel modules
-(window-resize (love.graphics.getWidth) (love.graphics.getHeight))
+(window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
 
 (fn love.load []
   (repl.start))
@@ -63,7 +63,7 @@
   (world.move-entities state dt))
 
 (fn love.resize [w h]
-  (window-resize w h))
+  (window-resize state w h))
 
 (fn love.keypressed [key]
   (if (or (= key "escape")
