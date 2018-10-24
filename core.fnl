@@ -52,8 +52,10 @@
 (fn love.update [dt]
   (set elapsed-time (+ elapsed-time dt))
   (let [[a b] (lume.filter state.entities (fn [e] (= e.unit :dragster)))]
-    (set a.heading (+ a.heading dt)) ;; send a in a circle
-    (set b.heading (if (> (math.cos (/ elapsed-time 2)) 0) 0 math.pi))) ;; send b back and forth
+    (when a
+      (set a.heading (+ a.heading dt))) ;; send a in a circle
+    (when b
+      (set b.heading (if (> (math.cos (/ elapsed-time 2)) 0) 0 math.pi)))) ;; send b back and forth
   (if (love.keyboard.isDown "=")     (camera.zoom state dt :in)
       (love.keyboard.isDown "-")     (camera.zoom state dt :out))
   (if (love.keyboard.isDown "up")    (camera.move state dt :up)
