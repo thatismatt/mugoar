@@ -4,7 +4,8 @@
 (local world (require "world"))
 (local camera (require "camera"))
 
-(local state
+;; global for use at repl
+(global state
   (let [world (world.new 50 50)]
     {:world world
      :camera {:main (camera.new world)}
