@@ -2,12 +2,24 @@
 
 (set units.dragster
      {:category :vehicle
+      :speed 2
       :shapes [{:shape :polygon
                 :pts [[1 0.25] [0 0.7] [0.6 0.7]]}
                {:shape :polygon
                 :pts [[0.1 0.7] [0.3 0.75] [0.2 0.7]]}
                {:shape :ellipse
                 :c [0.84 0.62] :r 0.13}]
+      :size [1 1]})
+
+(set units.tank
+     {:category :vehicle
+      :speed 1
+      :shapes [{:shape :polygon
+                :pts [[0.1 0.2] [1 0.2] [0.9 0.6] [0 0.6]]}
+               {:shape :ellipse
+                :c [0.2 0.62] :r 0.13}
+               {:shape :ellipse
+                :c [0.7 0.62] :r 0.13}]
       :size [1 1]})
 
 (set units.factory
