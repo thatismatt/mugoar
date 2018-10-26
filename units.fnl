@@ -1,7 +1,8 @@
 (local units {})
 
 (set units.dragster
-     {:shapes [{:shape :polygon
+     {:category :vehicle
+      :shapes [{:shape :polygon
                 :pts [[1 0.25] [0 0.7] [0.6 0.7]]}
                {:shape :polygon
                 :pts [[0.1 0.7] [0.3 0.75] [0.2 0.7]]}
@@ -10,7 +11,8 @@
       :size [1 1]})
 
 (set units.factory
-     {:shapes [{:shape :polygon
+     {:category :building
+      :shapes [{:shape :polygon
                 :pts [[0.2 0.2] [2.8 0.2] [2.8 0.8] [0.2 0.8]]}
                {:shape :polygon
                 :pts [[0.2 -0.3] [1 0.2] [0.2 0.2]]}
@@ -23,7 +25,8 @@
       :size [3 1]})
 
 (set units.barracks
-     {:shapes [{:shape :polygon
+     {:category :building
+      :shapes [{:shape :polygon
                 :pts [[0.2 0.2] [1.8 0.2] [1.8 0.8] [0.2 0.8]]}
                {:shape :polygon
                 :pts [[0.2 -0.1] [1 0.2] [0.2 0.2]]}
