@@ -16,8 +16,8 @@
 
 (let [w/2 (/ state.world.w 2)
       h/2 (/ state.world.h 2)]
-  (world.add state {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 2} [(+ w/2 4) (+ h/2 4)])
-  (world.add state {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 2} [(+ w/2 5) (+ h/2 6)])
+  (world.add state {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 0} [(+ w/2 4) (+ h/2 4)])
+  (world.add state {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 0} [(+ w/2 5) (+ h/2 6)])
   (world.add state {:unit :factory  :colour [0 0.7 0.3]} [(+ w/2 3) (+ h/2 2)])
   (world.add state {:unit :barracks :colour [0.8 0 0.6]} [(+ w/2 1) (+ h/2 1)]))
 
@@ -35,15 +35,8 @@
 (fn love.draw []
   (draw.draw state))
 
-(var elapsed-time 0)
 
 (fn love.update [dt]
-  (set elapsed-time (+ elapsed-time dt))
-  (let [[a b] (lume.filter state.entities (fn [e] (= e.unit :dragster)))]
-    (when a
-      (set a.heading (+ a.heading dt))) ;; send a in a circle
-    (when b
-      (set b.heading (if (> (math.cos (/ elapsed-time 2)) 0) 0 math.pi)))) ;; send b back and forth
   (if (love.keyboard.isDown "=")     (camera.zoom state dt :in)
       (love.keyboard.isDown "-")     (camera.zoom state dt :out))
   (if (love.keyboard.isDown "up")    (camera.move state dt :up)
@@ -63,13 +56,32 @@
       (= key "f11")
       (love.window.setFullscreen (not (love.window.getFullscreen)))))
 
+(fn entity-action [state pt]
+  ;; TODO: choose action depending on what is at pt
+  (let [entity-id (-> state.selection (lume.keys) (lume.first))
+        entity (. state.entities entity-id)
+        [px py] pt
+        (ex ey) (: state.world.physics :getRect entity) ;; NOTE: this is the top left corner of the entity, not the center
+        [dx dy] [(- px ex) (- py ey)]]
+    (set entity.heading (math.atan2 dy dx))
+    (set entity.speed 1)))
+
+(fn mouse-pressed [state button wx wy]
+  (let [near-by (: state.world.physics :queryRect (- wx 0.2) (- wy 0.2) 0.4 0.4)
+        selection (lume.filter near-by :id) ;; remove non id-ed "rects" i.e. world edges
+        old-n (lume.count state.selection)
+        new-n (lume.count selection)]
+    (if (and (not (= old-n 0))
+             (= new-n 0))
+        (entity-action state [wx wy])
+        (set state.selection (lume.reduce selection (fn [a e] (tset a e.id true) a) {})))))
+
 (fn love.mousepressed [x y button]
   (if (= button 1)
-      (let [[wx wy] [(: state.camera.main :toWorld x y)]
-            selected (: state.world.physics :queryRect (- wx 0.2) (- wy 0.2) 0.4 0.4)]
-        (set state.selection (-> selected
-                                 (lume.filter :id) ;; remove non id-ed "rects" i.e. world edges
-                                 (lume.reduce (fn [a e] (tset a e.id true) a) {}))))))
+      (let [[wx wy] [(: state.camera.main :toWorld x y)]]
+        (mouse-pressed state button wx wy))
+      (= button 2)
+      (set state.selection {})))
 
 ;; TODO: handle click & drag selection
 ;; (fn love.mousereleased [x y button]
