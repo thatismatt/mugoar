@@ -16,8 +16,8 @@
 
 (let [w/2 (/ state.world.w 2)
       h/2 (/ state.world.h 2)]
-  (world.add state {:unit :dragster :colour [0.8 0 0.6] :heading 0 :speed 0} [(+ w/2 4) (+ h/2 4)])
-  (world.add state {:unit :dragster :colour [0 0.7 0.3] :heading 0 :speed 0} [(+ w/2 5) (+ h/2 6)])
+  (world.add state {:unit :dragster :colour [0.8 0 0.6] :commands [] :heading 0 :speed 0} [(+ w/2 4) (+ h/2 4)])
+  (world.add state {:unit :dragster :colour [0 0.7 0.3] :commands [] :heading 0 :speed 0} [(+ w/2 5) (+ h/2 6)])
   (world.add state {:unit :factory  :colour [0 0.7 0.3]} [(+ w/2 3) (+ h/2 2)])
   (world.add state {:unit :barracks :colour [0.8 0 0.6]} [(+ w/2 1) (+ h/2 1)]))
 
@@ -35,6 +35,23 @@
 (fn love.draw []
   (draw.draw state))
 
+(fn update-entities [state]
+  (-> state.entities
+      (lume.filter (fn [e] (and e.commands
+                                (> (lume.count e.commands) 0))))
+      (lume.map (fn [entity]
+                  (let [[px py] (lume.first entity.commands)
+                        unit (. units entity.unit)
+                        [uw uh] unit.size
+                        (rx ry) (: state.world.physics :getRect entity)
+                        [ex ey] [(+ rx (/ uw 2)) (+ ry (/ uh 2))]
+                        [dx dy] [(- px ex) (- py ey)]]
+                    (if (< (+ (* dx dx) (* dy dy)) 0.05)
+                        (do (table.remove entity.commands 1)
+                            (set entity.heading nil)
+                            (set entity.speed nil))
+                        (do (set entity.heading (math.atan2 dy dx))
+                            (set entity.speed 2))))))))
 
 (fn love.update [dt]
   (if (love.keyboard.isDown "=")     (camera.zoom state dt :in)
@@ -43,6 +60,7 @@
       (love.keyboard.isDown "down")  (camera.move state dt :down))
   (if (love.keyboard.isDown "left")  (camera.move state dt :left)
       (love.keyboard.isDown "right") (camera.move state dt :right))
+  (update-entities state)
   (world.move-entities state dt))
 
 (fn love.resize [w h]
@@ -60,11 +78,12 @@
   ;; TODO: choose action depending on what is at pt
   (let [entity-id (-> state.selection (lume.keys) (lume.first))
         entity (. state.entities entity-id)
-        [px py] pt
-        (ex ey) (: state.world.physics :getRect entity) ;; NOTE: this is the top left corner of the entity, not the center
-        [dx dy] [(- px ex) (- py ey)]]
-    (set entity.heading (math.atan2 dy dx))
-    (set entity.speed 1)))
+        unit (. units entity.unit)
+        shift? (love.keyboard.isDown "lshift" "rshift")]
+    (when (= unit.category :vehicle)
+      (if shift?
+          (table.insert entity.commands pt)
+          (set entity.commands [pt])))))
 
 (fn mouse-pressed [state button wx wy]
   (let [near-by (: state.world.physics :queryRect (- wx 0.2) (- wy 0.2) 0.4 0.4)
