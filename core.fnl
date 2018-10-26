@@ -75,26 +75,31 @@
       (= key "f11")
       (love.window.setFullscreen (not (love.window.getFullscreen)))))
 
-(fn entity-action [state pt]
+(fn entity-action [state pt shift?]
   ;; TODO: choose action depending on what is at pt
-  (let [entity-id (-> state.selection (lume.keys) (lume.first))
-        entity (. state.entities entity-id)
-        unit (. units entity.unit)
-        shift? (love.keyboard.isDown "lshift" "rshift")]
-    (when (= unit.category :vehicle)
-      (if shift?
-          (table.insert entity.commands pt)
-          (set entity.commands [pt])))))
+  (lume.map (lume.keys state.selection)
+            (fn [entity-id]
+              (let [entity (. state.entities entity-id)
+                    unit (. units entity.unit)]
+                (when (= unit.category :vehicle)
+                  (if shift?
+                      (table.insert entity.commands pt)
+                      (set entity.commands [pt])))))))
 
 (fn mouse-pressed [state button wx wy]
   (let [near-by (: state.world.physics :queryRect (- wx 0.2) (- wy 0.2) 0.4 0.4)
         selection (lume.filter near-by :id) ;; remove non id-ed "rects" i.e. world edges
         old-n (lume.count state.selection)
-        new-n (lume.count selection)]
+        new-n (lume.count selection)
+        shift? (love.keyboard.isDown "lshift" "rshift")]
     (if (and (not (= old-n 0))
              (= new-n 0))
-        (entity-action state [wx wy])
-        (set state.selection (lume.reduce selection (fn [a e] (tset a e.id true) a) {})))))
+        (entity-action state [wx wy] shift?)
+        (let [new-selection (lume.reduce selection (fn [a e] (tset a e.id true) a) {})]
+          (set state.selection
+               (if shift?
+                   (lume.merge state.selection new-selection)
+                   new-selection))))))
 
 (fn love.mousepressed [x y button]
   (if (= button 1)

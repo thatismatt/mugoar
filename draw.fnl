@@ -57,27 +57,31 @@
                                 state.hud.w 0
                                 state.hud.w state.window.h
                                 0 state.window.h])
-  (let [padding 10
-        entity-id (-> state.selection (lume.keys) (lume.first))]
-    (when entity-id
-      (let [entity (. state.entities entity-id)
-            unit (. units entity.unit)
-            [uw uh] unit.size
-            scale (/ (- state.hud.w (* 2 padding)) 4)]
-        ;; draw unit name
-        (love.graphics.setFont (love.graphics.newFont 36))
-        (love.graphics.setColor [1 1 1])
-        (love.graphics.print entity.unit
-                             padding
-                             (+ padding 100 scale))
-        ;; draw unit
-        (love.graphics.push)
-        (love.graphics.translate (+ padding
-                                    (* (- 2 (/ uw 2)) scale)) ;; center the unit
-                                 100) ;; HACK: account for units that exceed their bbox
-        (love.graphics.scale scale)
-        (draw.object state unit entity.colour [0 0] false)
-        (love.graphics.pop)))))
+  (each [i entity-id (lume.ripairs (lume.keys state.selection))]
+    (let [padding 10
+          entity (. state.entities entity-id)
+          unit (. units entity.unit)
+          [uw uh] unit.size
+          scale (/ (- state.hud.w (* 2 padding)) 4)]
+      ;; draw unit name
+      (love.graphics.setFont (love.graphics.newFont 36))
+      (love.graphics.setColor [1 1 1])
+      (love.graphics.print entity.unit
+                           padding
+                           (+ padding
+                              100
+                              (* (- i 1) 50)
+                              scale))
+      ;; draw unit
+      (love.graphics.push)
+      (love.graphics.translate (+ padding
+                                  (* (- i 1) scale 0.5)
+                                  (* (- 2 (/ uw 2)) scale)) ;; center the unit
+                               (- 100 ;; HACK: account for units that exceed their bbox
+                                  (* (- i 1) scale 0.1)))
+      (love.graphics.scale scale)
+      (draw.object state unit entity.colour [0 0] false)
+      (love.graphics.pop))))
 
 (fn draw.draw [state]
   ;; draw map canvas
