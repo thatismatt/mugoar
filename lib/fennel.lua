@@ -314,16 +314,17 @@ local function parser(getbyte, filename)
                     dispatch(rawstr:sub(2))
                 else
                     local forceNumber = rawstr:match('^%d')
+		    local numberWithStrippedUnderscores = rawstr:gsub("_", "")
                     local x
                     if forceNumber then
-                        x = tonumber(rawstr) or parseError('could not read token "' .. rawstr .. '"')
+                        x = tonumber(numberWithStrippedUnderscores) or
+                            parseError('could not read token "' .. rawstr .. '"')
                     else
-                        x = tonumber(rawstr) or sym(rawstr, nil, {
-                            line = line,
-                            filename = filename,
-                            bytestart = bytestart,
-                            byteend = byteindex
-                        })
+                        x = tonumber(numberWithStrippedUnderscores) or
+                            sym(rawstr, nil, { line = line,
+                                               filename = filename,
+                                               bytestart = bytestart,
+                                               byteend = byteindex, })
                     end
                     dispatch(x)
                 end
@@ -1084,10 +1085,14 @@ SPECIALS['fn'] = function(ast, scope, parent)
             assertCompile(i == #argList, "expected vararg in last parameter position", ast)
             argNameList[i] = '...'
             fScope.vararg = true
-        elseif isSym(argList[i])
-            and argList[i][1] ~= "nil"
-            and not isMultiSym(argList[i][1]) then
+        elseif(isSym(argList[i]) and argList[i][1] ~= "nil"
+               and not isMultiSym(argList[i][1])) then
             argNameList[i] = declareLocal(argList[i], {}, fScope, ast)
+        elseif isTable(argList[i]) then
+            local raw = sym(gensym(scope))
+            argNameList[i] = declareLocal(raw, {}, fScope, ast)
+            destructure(argList[i], raw, ast, fScope, fChunk,
+                        { declaration = true, nomulti = true })
         else
             assertCompile(false, 'expected symbol for function parameter', ast)
         end
@@ -1136,7 +1141,12 @@ SPECIALS['.'] = function(ast, scope, parent)
                 table.insert(indices, '[' .. tostring(index) .. ']')
             end
         end
-        return tostring(lhs[1]) .. table.concat(indices)
+        -- extra parens are needed for table literals
+        if isTable(ast[2]) then
+            return '(' .. tostring(lhs[1]) .. ')' .. table.concat(indices)
+        else
+            return tostring(lhs[1]) .. table.concat(indices)
+        end
     end
 end
 
@@ -1303,14 +1313,26 @@ SPECIALS['each'] = function(ast, scope, parent)
     local binding = assertCompile(isTable(ast[2]), 'expected binding table', ast)
     local iter = table.remove(binding, #binding) -- last item is iterator call
     local bindVars = {}
+    local destructures = {}
     for _, v in ipairs(binding) do
-        assertCompile(isSym(v), 'expected iterator symbol', ast)
-        table.insert(bindVars, declareLocal(v, {}, scope, ast))
+        assertCompile(isSym(v) or isTable(v),
+                      'expected iterator symbol or table', ast)
+        if(isSym(v)) then
+            table.insert(bindVars, declareLocal(v, {}, scope, ast))
+        else
+            local raw = sym(gensym(scope))
+            destructures[raw] = v
+            table.insert(bindVars, declareLocal(raw, {}, scope, ast))
+        end
     end
     emit(parent, ('for %s in %s do'):format(
              table.concat(bindVars, ', '),
              tostring(compile1(iter, scope, parent, {nval = 1})[1])), ast)
     local chunk = {}
+    for raw, args in pairs(destructures) do
+        destructure(args, raw, ast, scope, chunk,
+                    { declaration = true, nomulti = true })
+    end
     compileDo(ast, scope, chunk, 3)
     emit(parent, chunk, ast)
     emit(parent, 'end', ast)
@@ -1494,17 +1516,20 @@ end
 
 local function compile(ast, options)
     options = options or {}
+    local oldGlobals = allowedGlobals
     allowedGlobals = options.allowedGlobals
     if options.indent == nil then options.indent = '  ' end
     local chunk = {}
     local scope = options.scope or makeScope(GLOBAL_SCOPE)
     local exprs = compile1(ast, scope, chunk, {tail = true})
     keepSideEffects(exprs, chunk, nil, ast)
+    allowedGlobals = oldGlobals
     return flatten(chunk, options)
 end
 
 local function compileStream(strm, options)
     options = options or {}
+    local oldGlobals = allowedGlobals
     allowedGlobals = options.allowedGlobals
     if options.indent == nil then options.indent = '  ' end
     local scope = options.scope or makeScope(GLOBAL_SCOPE)
@@ -1520,6 +1545,7 @@ local function compileStream(strm, options)
         })
         keepSideEffects(exprs, chunk, nil, vals[i])
     end
+    allowedGlobals = oldGlobals
     return flatten(chunk, options)
 end
 
@@ -1772,6 +1798,8 @@ local function makeCompilerEnv(ast, scope, parent)
         -- via fennel.myfun, for example (fennel.eval "(print 1)").
         list = list,
         sym = sym,
+        unpack = unpack,
+        gensym = function() return sym(gensym(scope)) end,
         [globalMangling("list?")] = isList,
         [globalMangling("multi-sym?")] = isMultiSym,
         [globalMangling("sym?")] = isSym,
@@ -1780,18 +1808,18 @@ local function makeCompilerEnv(ast, scope, parent)
     }, { __index = _ENV or _G })
 end
 
-local function macroGlobals(env)
-    if allowedGlobals then
-        local allowed = {}
-        for k in pairs(env) do
-            local g = globalUnmangling(k)
-            table.insert(allowed, g)
-        end
-        for _,k in pairs(allowedGlobals) do
+local function macroGlobals(env, globals)
+    local allowed = {}
+    for k in pairs(env) do
+        local g = globalUnmangling(k)
+        table.insert(allowed, g)
+    end
+    if globals then
+        for _, k in pairs(globals) do
             table.insert(allowed, k)
         end
-        return allowed
     end
+    return allowed
 end
 
 SPECIALS['require-macros'] = function(ast, scope, parent)
@@ -1804,8 +1832,10 @@ SPECIALS['require-macros'] = function(ast, scope, parent)
             local filename = assertCompile(searchModule(modname),
                                            modname .. " not found.", ast)
             local env = makeCompilerEnv(ast, scope, parent)
-            mod = dofile_fennel(filename, {env=env,
-                                           allowedGlobals=macroGlobals(env)})
+            mod = dofile_fennel(filename, {
+                env = env,
+                allowedGlobals = macroGlobals(env, currentGlobalNames())
+            })
             macroLoaded[modname] = mod
         end
         for k, v in pairs(assertCompile(isTable(mod), 'expected ' .. modname ..
@@ -1839,6 +1869,14 @@ local stdmacros = [===[
            (table.insert elt x)
            (set x elt))
          x)
+ :doto (fn [val ...]
+         (let [name (gensym)
+               form (list (sym :let) [name val])]
+           (each [_ elt (pairs [...])]
+             (table.insert elt 2 name)
+             (table.insert form elt))
+           (table.insert form name)
+           form))
  :defn (fn [name args ...]
          (assert (sym? name) "defn: function names must be symbols")
          (list (sym :fn) name args ...))
@@ -1866,14 +1904,17 @@ local stdmacros = [===[
                                           :format (tostring a)
                                           (or a.filename "unknown")
                                           (or a.line "?"))))))
-             (list (sym "fn") ((or unpack table.unpack) args))))
+             (list (sym "fn") (unpack args))))
 }
 ]===]
-for name, fn in pairs(eval(stdmacros, {
-    env = makeCompilerEnv(nil, GLOBAL_SCOPE, {}),
-    allowedGlobals = false,
-})) do
-    SPECIALS[name] = macroToSpecial(fn)
+do
+    local env = makeCompilerEnv(nil, GLOBAL_SCOPE, {})
+    for name, fn in pairs(eval(stdmacros, {
+        env = env,
+        allowedGlobals = macroGlobals(env, currentGlobalNames()),
+    })) do
+        SPECIALS[name] = macroToSpecial(fn)
+    end
 end
 SPECIALS['λ'] = SPECIALS['lambda']
 
