@@ -12,6 +12,22 @@
     (love.graphics.setColor [0.3 0.7 1 (if (= (% i 10) 0) 0.8 0.4)])
     (love.graphics.line 0 i state.world.w i)))
 
+(fn draw.shape
+  [shape coord]
+  (let [[x y] coord
+        transform (love.math.newTransform 0 0  0 1 1 (- x) (- y))]
+    (if (= shape.shape :polygon)
+        (love.graphics.polygon :fill
+                               (-> shape.pts
+                                   (lume.map (fn [pt] [(: transform :transformPoint (unpack pt))]))
+                                   (lume.reduce lume.concat)))
+        (= shape.shape :ellipse)
+        (let [[rx ry] (if (= (type shape.r) "table") shape.r [shape.r shape.r])
+              (cx cy) (: transform :transformPoint (unpack shape.c))]
+          (love.graphics.ellipse :fill
+                                 cx cy rx ry
+                                 12)))))
+
 (fn draw.object [state unit colour coord selected?]
   (love.graphics.setColor colour)
   (let [[x y] coord
@@ -22,20 +38,7 @@
       (love.graphics.line (-> [[0 0] [0 h] [w h] [w 0] [0 0]]
                               (lume.map (fn [pt] [(: transform :transformPoint (unpack pt))]))
                               (lume.reduce lume.concat))))
-    (lume.map
-     unit.shapes
-     (fn [s]
-       (if (= s.shape :polygon)
-           (love.graphics.polygon :fill
-                                  (-> s.pts
-                                      (lume.map (fn [pt] [(: transform :transformPoint (unpack pt))]))
-                                      (lume.reduce lume.concat)))
-           (= s.shape :ellipse)
-           (let [[rx ry] (if (= (type s.r) "table") s.r [s.r s.r])
-                 (cx cy) (: transform :transformPoint (unpack s.c))]
-             (love.graphics.ellipse :fill
-                                    cx cy rx ry
-                                    12)))))
+    (lume.map unit.shapes (fn [s] (draw.shape s coord)))
     (when selected?
       (love.graphics.setColor [1 1 1 0.5])
       (love.graphics.setLineWidth 0.1)
