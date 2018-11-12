@@ -13,9 +13,8 @@
     (love.graphics.line 0 i state.world.w i)))
 
 (fn draw.shape
-  [shape coord]
-  (let [[x y] coord
-        transform (love.math.newTransform 0 0  0 1 1 (- x) (- y))]
+  [shape [x y]]
+  (let [transform (love.math.newTransform 0 0  0 1 1 (- x) (- y))]
     (if (= shape.shape :polygon)
         (love.graphics.polygon :fill
                                (-> shape.pts
@@ -28,17 +27,16 @@
                                  cx cy rx ry
                                  12)))))
 
-(fn draw.object [state unit colour coord selected?]
+(fn draw.object [state unit colour [x y] selected?]
   (love.graphics.setColor colour)
-  (let [[x y] coord
-        transform (love.math.newTransform 0 0  0 1 1 (- x) (- y))
+  (let [transform (love.math.newTransform 0 0  0 1 1 (- x) (- y))
         [w h] unit.size]
     (when state.debug.draw-bounding-box?
       (love.graphics.setLineWidth 0.1)
       (love.graphics.line (-> [[0 0] [0 h] [w h] [w 0] [0 0]]
                               (lume.map (fn [pt] [(: transform :transformPoint (unpack pt))]))
                               (lume.reduce lume.concat))))
-    (lume.map unit.shapes (fn [s] (draw.shape s coord)))
+    (lume.map unit.shapes (fn [s] (draw.shape s [x y])))
     (when selected?
       (love.graphics.setColor [1 1 1 0.5])
       (love.graphics.setLineWidth 0.1)
