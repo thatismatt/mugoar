@@ -47,7 +47,7 @@
                         (rx ry) (: state.world.physics :getRect entity)
                         [ex ey] [(+ rx (/ uw 2)) (+ ry (/ uh 2))]
                         [dx dy] [(- px ex) (- py ey)]]
-                    (if (< (+ (* dx dx) (* dy dy)) 0.05)
+                    (if (< (+ (* dx dx) (* dy dy)) 0.01)
                         (do (table.remove entity.commands 1)
                             (set entity.heading nil)
                             (set entity.speed nil))
