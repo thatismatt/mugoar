@@ -2,7 +2,7 @@
 
 (set units.dragster
      {:category :vehicle
-      :speed 2
+      :speed 10
       :shapes [{:shape :polygon
                 :pts [[1 0.25] [0 0.7] [0.6 0.7]]}
                {:shape :polygon
