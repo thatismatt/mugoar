@@ -88,18 +88,23 @@
 
 (fn mouse-pressed [state button wx wy]
   (let [near-by (: state.world.physics :queryRect (- wx 0.2) (- wy 0.2) 0.4 0.4)
-        selection (lume.filter near-by :id) ;; remove non id-ed "rects" i.e. world edges
+        selection (-> near-by
+                      (lume.filter :id) ;; remove non id-ed "rects" i.e. world edges
+                      (lume.map :id))
         old-n (lume.count state.selection)
         new-n (lume.count selection)
         shift? (love.keyboard.isDown "lshift" "rshift")]
     (if (and (not (= old-n 0))
              (= new-n 0))
         (entity-action state [wx wy] shift?)
-        (let [new-selection (lume.reduce selection (fn [a e] (tset a e.id true) a) {})]
-          (set state.selection
-               (if shift?
-                   (lume.merge state.selection new-selection)
-                   new-selection))))))
+        (and shift?
+             (= new-n 1)
+             (. state.selection (. selection 1)))
+        (tset state.selection (. selection 1) nil)
+        shift?
+        (lume.map selection (fn [id] (tset state.selection id true)))
+        :else
+        (set state.selection (lume.reduce selection (fn [a id] (tset a id true) a) {})))))
 
 (fn love.mousepressed [x y button]
   (if (= button 1)
