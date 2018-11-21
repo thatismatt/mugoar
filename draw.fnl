@@ -81,7 +81,8 @@
                                (- 100 ;; HACK: account for units that exceed their bbox
                                   (* (- i 1) scale 0.1)))
       (love.graphics.scale scale)
-      (draw.object state unit entity.colour [0 0] false)
+      (love.graphics.setColor entity.colour)
+      (lume.map unit.shapes (fn [s] (draw.shape s [0 0])))
       (love.graphics.pop))))
 
 (fn draw.draw [state]
