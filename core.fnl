@@ -21,7 +21,8 @@
   (set state.level (require (.. "level." level)))
   (if state.level.init (state.level.init state)))
 
-(set-level state "units")
+;; (set-level state "units")
+(set-level state "nav-debug")
 
 (fn window-resize [state w h]
   (set state.window {:w w :h h})
