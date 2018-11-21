@@ -93,7 +93,8 @@
      (fn [l t w h]
        ;; TODO: only draw what is visible
        (draw.map state)
-       (draw.entities state)))
+       (draw.entities state)
+       (when state.level.draw (state.level.draw state))))
   ;; draw hud canvas
   (love.graphics.setCanvas state.layers.hud)
   (love.graphics.clear)

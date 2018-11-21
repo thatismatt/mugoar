@@ -12,15 +12,16 @@
      :entities {} ;; entity-id -> entity
      :selection {} ;; entity-id -> true (i.e. a set)
      :hud {:w 400}
+     :level {}
      :debug {:draw-bounding-box? false
              :draw-fps? false}}))
 
-(let [w/2 (/ state.world.w 2)
-      h/2 (/ state.world.h 2)]
-  (world.add state {:unit :dragster :colour [0.8 0 0.6] :commands [] :heading 0 :speed 0} [(+ w/2 4) (+ h/2 4)])
-  (world.add state {:unit :tank     :colour [0 0.7 0.3] :commands [] :heading 0 :speed 0} [(+ w/2 5) (+ h/2 4)])
-  (world.add state {:unit :factory  :colour [0 0.7 0.3]} [(+ w/2 3) (+ h/2 2)])
-  (world.add state {:unit :barracks :colour [0.8 0 0.6]} [(+ w/2 1) (+ h/2 1)]))
+(fn set-level
+  [state level]
+  (set state.level (require (.. "level." level)))
+  (if state.level.init (state.level.init state)))
+
+(set-level state "units")
 
 (fn window-resize [state w h]
   (set state.window {:w w :h h})
