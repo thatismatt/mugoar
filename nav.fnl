@@ -1,6 +1,13 @@
 (local nav {})
 
-(fn nav.euclidean-distance [[x1 y1] [x2 y2]]
+;; ref: http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter23_Crowd_Pathfinding_and_Steering_Using_Flow_Field_Tiles.pdf
+
+(fn nav.hash
+  [[x y]]
+  (.. x "-" y))
+
+(fn nav.euclidean
+  [[x1 y1] [x2 y2]]
   (let [dx (- x2 x1)
         dy (- y2 y1)]
     (+ (* dx dx) (* dy dy))))
@@ -27,69 +34,80 @@
           (< fx tx) "E"
           :else "")))
 
+;; cost fields are universal
+;; integration fields are per destination
+;;  - are they also per unit size?
+;; flow fields are per
+(fn nav.init-path
+  [state [goal-x goal-y]]
+  (let [goal-hash (nav.hash [goal-x goal-y])]
+    ;; TODO: create proper cost fields
+    (for [_ 1 50]
+      (tset state.nav.cost.static
+            (nav.hash [(math.floor (lume.random state.world.w))
+                       (math.floor (lume.random state.world.h))])
+            true))
+    (tset state.nav.integration goal-hash [])
+    (for [x 1 state.world.w]
+      (-> state.nav.integration (. goal-hash) (tset x []))
+      (tset state.nav.flow x [])
+      (for [y 1 state.world.h]
+        (-> state.nav.integration (. goal-hash) (. x) (tset y math.huge))
+        (table.insert state.nav.open [x y])))
+    (-> state.nav.integration (. goal-hash) (. goal-x) (tset goal-y 0))))
+
+(fn nav.step
+  [state goal]
+  (let [goal-hash (nav.hash goal)]
+    (table.sort state.nav.open (fn [[ax ay] [bx by]]
+                                 (let [ac (-> state.nav.integration (. goal-hash) (. ax) (. ay))
+                                       bc (-> state.nav.integration (. goal-hash) (. bx) (. by))]
+                                   (< ac bc))))
+    (let [[px py] (table.remove state.nav.open 1)
+          p-dist (-> state.nav.integration (. goal-hash) (. px) (. py))]
+      (-> (nav.neighbours state [px py])
+          (lume.filter (fn [[nx ny]] (not (. state.nav.closed (nav.hash [nx ny])))))
+          (lume.filter (fn [[nx ny]] (not (. state.nav.cost.static (nav.hash [nx ny]))))) ;; TODO: calculate costs - don't just remove them
+          (lume.map (fn [[nx ny]]
+                      (let [old-n-dist (-> state.nav.integration (. goal-hash) (. nx) (. ny))
+                            dist-delta (nav.euclidean [px py] [nx ny])
+                            n-dist (+ p-dist dist-delta)]
+                        (when (> old-n-dist n-dist)
+                          (-> state.nav.integration (. goal-hash) (. nx) (tset ny n-dist)))))))
+      (tset state.nav.closed (nav.hash [px py]) true))))
+
+(fn nav.flow
+  [state goal]
+  (let [goal-hash (nav.hash goal)]
+    (for [x 1 state.world.w]
+      (for [y 1 state.world.h]
+        (let [min-n (-> (nav.neighbours state [x y])
+                        (lume.map (fn [[nx ny]] {:n [nx ny]
+                                                 :d (-> state.nav.integration (. goal-hash) (. nx) (. ny))}))
+                        (lume.sort :d)
+                        (lume.first)
+                        (. :n))
+              flow (nav.direction [x y] min-n)]
+          (tset (. state.nav.flow x) y flow))))))
+
 (fn nav.init
   [state]
-  (set state.nav {:walls {} ;; cost field
-                  :distance [] ;; integration field
-                  :flow [] ;; flow field
+  (set state.nav {:cost {:permanent []
+                         :static []
+                         :dynamic []}
+                  :integration {}
+                  :flow {}
                   ;; TODO: remove open & closed from the global state
                   ;;  - they are per goal (like the integration field)
                   ;;  - not required after integration field calculation
                   :open []
-                  :closed {}})
-  (for [_ 1 100]
-    ;; TODO: create a proper cost field
-    (tset state.nav.walls
-          (.. (math.floor (lume.random state.world.w))
-              "-"
-              (math.floor (lume.random state.world.h)))
-          true))
-  ;; TODO: have a distance (AKA integration) field per goal
-  (for [x 1 state.world.w]
-    (tset state.nav.distance x [])
-    (tset state.nav.flow x [])
-    (for [y 1 state.world.h]
-      (tset (. state.nav.distance x) y math.huge)
-      (table.insert state.nav.open [x y])))
-  (let [[sx sy] [10 5]] ;; TODO: don't hard code the goal
-    (tset (. state.nav.distance sx) sy 0)))
-
-(fn nav.step
-  [state]
-  (table.sort state.nav.open (fn [[ax ay] [bx by]]
-                               (let [ac (-> state.nav.distance (. ax) (. ay))
-                                     bc (-> state.nav.distance (. bx) (. by))]
-                                 (< ac bc))))
-  (let [[px py] (table.remove state.nav.open 1)
-        p-dist (-> state.nav.distance (. px) (. py))]
-    (-> (nav.neighbours state [px py])
-        (lume.filter (fn [[nx ny]] (not (. state.nav.closed (.. nx "-" ny)))))
-        (lume.filter (fn [[nx ny]] (not (. state.nav.walls (.. nx "-" ny)))))
-        (lume.map (fn [[nx ny]]
-                    (let [old-n-dist (-> state.nav.distance (. nx) (. ny))
-                          dist-delta (nav.euclidean-distance [px py] [nx ny])
-                          n-dist (+ p-dist dist-delta)]
-                      (when (> old-n-dist n-dist)
-                        (tset (. state.nav.distance nx) ny n-dist))))))
-    (tset state.nav.closed (.. px "-" py) true)))
-
-(fn nav.flow
-  [state]
-  (for [x 1 state.world.w]
-    (for [y 1 state.world.h]
-      (let [min-n (-> (nav.neighbours state [x y])
-                      (lume.map (fn [[nx ny]] {:n [nx ny]
-                                               :d (-> state.nav.distance (. nx) (. ny))}))
-                      (lume.sort :d)
-                      (lume.first)
-                      (. :n))
-            flow (nav.direction [x y] min-n)]
-        (tset (. state.nav.flow x) y flow)))))
+                  :closed {}}))
 
 (fn nav.run
-  [state]
+  [state goal]
+  (nav.init-path state goal)
   (while (not (= (# state.nav.open) 0))
-    (nav.step state))
-  (nav.flow state))
+    (nav.step state goal))
+  (nav.flow state goal))
 
 nav

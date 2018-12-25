@@ -1,12 +1,13 @@
 (local nav (require "nav"))
 (local draw (require "draw"))
 
-(local level {:name :nav-debug})
+(local level {:name :nav-debug
+              :goal [2 3]})
 
 (fn level.init
   [state]
   (nav.init state)
-  (nav.run state))
+  (nav.run state level.goal))
 
 (set level.arrows {:N  [[0.4 0.8] [0.6 0.8] [0.5 0.2]]
                    :NE [[0.7 0.3] [0.4 0.8] [0.2 0.6]]
@@ -19,20 +20,26 @@
 
 (fn level.draw
   [state]
-  (for [i 1 state.world.w]
-    (for [j 1 state.world.h]
-      (let [dist (-> state.nav.distance (. i) (. j))
-            flow (-> state.nav.flow (. i) (. j))]
-        (love.graphics.setColor (if (= dist 0)
-                                    [1 1 1] ;; destination
-                                    [1 0 0 (/ dist 20)]))
-        (draw.shape {:shape :polygon
-                     :pts [[0.1 0.1] [0.1 0.9] [0.9 0.9] [0.9 0.1]]}
-                    [(- i 1) (- j 1)])
-        (when flow
-          (love.graphics.setColor [0 1 0])
-          (draw.shape {:shape :polygon
-                       :pts (. level.arrows flow)}
-                      [(- i 1) (- j 1)]))))))
+  (let [goal-hash (nav.hash level.goal)]
+    (for [i 1 state.world.w]
+      (for [j 1 state.world.h]
+        (let [dist (-> state.nav.integration (. goal-hash) (. i) (. j))
+              flow (-> state.nav.flow (. i) (. j))]
+          (if (= dist math.huge)
+              (do (love.graphics.setColor [0 0 1])
+                  (draw.shape {:shape :polygon
+                               :pts [[0.3 0.3] [0.3 0.7] [0.7 0.7] [0.7 0.3]]}
+                              [(- i 1) (- j 1)]))
+              flow
+              (do (love.graphics.setColor [1 0 0 (/ dist 20)])
+                  (draw.shape {:shape :polygon
+                               :pts [[0.1 0.1] [0.1 0.9] [0.9 0.9] [0.9 0.1]]}
+                              [(- i 1) (- j 1)])
+                  (love.graphics.setColor [0 1 0 0.7])
+                  (draw.shape {:shape :polygon
+                               :pts (if (= dist 0)
+                                        [[0.3 0.3] [0.3 0.7] [0.7 0.7] [0.7 0.3]]
+                                        (. level.arrows flow))}
+                              [(- i 1) (- j 1)]))))))))
 
 level
