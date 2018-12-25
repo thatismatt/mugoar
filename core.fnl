@@ -11,7 +11,8 @@
      :camera {:main (camera.new world)}
      :entities {} ;; entity-id -> entity
      :selection {} ;; entity-id -> true (i.e. a set)
-     :hud {:w 400}
+     :hud {:w 400
+           :visible? false}
      :level {}
      :debug {:draw-bounding-box? false
              :draw-fps? false}}))

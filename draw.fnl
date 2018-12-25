@@ -98,7 +98,8 @@
   ;; draw hud canvas
   (love.graphics.setCanvas state.layers.hud)
   (love.graphics.clear)
-  (draw.hud state)
+  (when state.hud.visible?
+    (draw.hud state))
   (when state.debug.draw-fps?
     (love.graphics.setColor [1 1 1])
     (love.graphics.print (tostring (love.timer.getFPS)) 10 10))
