@@ -3,7 +3,8 @@
 (local camera {})
 
 (fn camera.new [world]
-  (let [c (gamera.new 0 0 world.w world.h)]
+  ;; NOTE: padding of 10 cells around world
+  (let [c (gamera.new -10 -10 (+ world.w 20) (+ world.h 20))]
     (: c :setScale 64)
     c))
 
