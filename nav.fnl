@@ -1,3 +1,5 @@
+(local world (require "world"))
+
 (local nav {})
 
 ;; ref: http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter23_Crowd_Pathfinding_and_Steering_Using_Flow_Field_Tiles.pdf
@@ -45,8 +47,7 @@
       (for [y 1 state.world.h]
         (tset state.nav.cost.static
               (nav.hash [x y])
-              (-> (: state.world.physics :queryRect (- x 1) (- y 1) 1 1)
-                  (lume.filter :id) ;; remove non id-ed "rects" i.e. world edges
+              (-> (world.query-rect state (- x 1) (- y 1) 1 1)
                   (lume.count)
                   (~= 0)))))
     (tset state.nav.integration goal-hash [])

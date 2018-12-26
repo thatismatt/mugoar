@@ -42,4 +42,11 @@
 (fn world.position [state entity]
   [(: state.world.physics :getRect entity)])
 
+(fn world.query-rect [state x y w h]
+  (-> (: state.world.physics :queryRect x y w h)
+      (lume.filter :id))) ;; remove non id-ed "rects" i.e. world edges
+
+(fn world.query-point [state x y d]
+  (world.query-rect state (- x d) (- y d) (* 2 d) (* 2 d)))
+
 world

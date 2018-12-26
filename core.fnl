@@ -47,7 +47,7 @@
                   (let [[px py] (lume.first entity.commands)
                         unit (. units entity.unit)
                         [uw uh] unit.size
-                        (rx ry) (: state.world.physics :getRect entity)
+                        [rx ry] (world.position state entity)
                         [ex ey] [(+ rx (/ uw 2)) (+ ry (/ uh 2))]
                         [dx dy] [(- px ex) (- py ey)]]
                     (if (< (+ (* dx dx) (* dy dy)) 0.01)
@@ -90,9 +90,7 @@
                       (set entity.commands [pt])))))))
 
 (fn mouse-pressed [state button wx wy]
-  (let [near-by (: state.world.physics :queryRect (- wx 0.2) (- wy 0.2) 0.4 0.4)
-        selection (-> near-by
-                      (lume.filter :id) ;; remove non id-ed "rects" i.e. world edges
+  (let [selection (-> (world.query-point state wx wy 0.2)
                       (lume.map :id))
         old-n (lume.count state.selection)
         new-n (lume.count selection)
