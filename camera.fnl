@@ -19,6 +19,11 @@
         new-scale (+ old-scale (* scale-factor dt))]
     (: state.camera.main :setScale (lume.clamp new-scale 12 128))))
 
+(fn camera.scale [state scale]
+  (if scale
+      (: state.camera.main :setScale scale)
+      (: state.camera.main :getScale)))
+
 (fn camera.move [state dt dir]
   (let [(x y) (: state.camera.main :getPosition)
         p (if (= dir :left)  [(- x (* 12 dt)) y]
@@ -28,6 +33,8 @@
     (: state.camera.main :setPosition (unpack p))))
 
 (fn camera.position [state position]
-  (: state.camera.main :setPosition (unpack position)))
+  (if position
+      (: state.camera.main :setPosition (unpack position))
+      [(: state.camera.main :getPosition)]))
 
 camera
