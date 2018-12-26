@@ -41,12 +41,14 @@
 (fn nav.init-path
   [state [goal-x goal-y]]
   (let [goal-hash (nav.hash [goal-x goal-y])]
-    ;; TODO: create proper cost fields
-    (for [_ 1 50]
-      (tset state.nav.cost.static
-            (nav.hash [(math.floor (lume.random state.world.w))
-                       (math.floor (lume.random state.world.h))])
-            true))
+    (for [x 1 state.world.w]
+      (for [y 1 state.world.h]
+        (tset state.nav.cost.static
+              (nav.hash [x y])
+              (-> (: state.world.physics :queryRect (- x 1) (- y 1) 1 1)
+                  (lume.filter :id) ;; remove non id-ed "rects" i.e. world edges
+                  (lume.count)
+                  (~= 0)))))
     (tset state.nav.integration goal-hash [])
     (for [x 1 state.world.w]
       (-> state.nav.integration (. goal-hash) (tset x []))
