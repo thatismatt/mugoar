@@ -119,14 +119,14 @@ local function granulate(getchunk)
     local c = ''
     local index = 1
     local done = false
-    return function ()
+    return function (parserState)
         if done then return nil end
         if index <= #c then
             local b = c:byte(index)
             index = index + 1
             return b
         else
-            c = getchunk()
+            c = getchunk(parserState)
             if not c or c == '' then
                 done = true
                 return nil
@@ -200,7 +200,7 @@ local function parser(getbyte, filename)
         if lastb then
             r, lastb = lastb, nil
         else
-            r = getbyte()
+            r = getbyte({ stackSize = #stack })
         end
         byteindex = byteindex + 1
         if r == 10 then line = line + 1 end
@@ -331,6 +331,8 @@ local function parser(getbyte, filename)
             end
         until done
         return true, retval
+    end, function ()
+        stack = {}
     end
 end
 
@@ -1558,6 +1560,27 @@ end
 --- Evaluation
 ---
 
+-- Convert a fennel environment table to a Lua environment table.
+-- This means automatically unmangling globals when getting a value,
+-- and mangling values when setting a value. This means the original
+-- env will see its values updated as expected, regardless of mangling rules.
+local function wrapEnv(env)
+    return setmetatable({}, {
+        __index = function (_, key)
+            if type(key) == 'string' then
+                key = globalUnmangling(key)
+            end
+            return env[key]
+        end,
+        __newindex = function (_, key, value)
+            if type(key) == 'string' then
+                key = globalMangling(key)
+            end
+            env[key] = value
+        end
+    })
+end
+
 -- A custom traceback function for Fennel that looks similar to
 -- the Lua's debug.traceback.
 -- Use with xpcall to produce fennel specific stacktraces.
@@ -1620,8 +1643,9 @@ local function eval(str, options, ...)
     if options.allowedGlobals == nil and not getmetatable(options.env) then
         options.allowedGlobals = currentGlobalNames(options.env)
     end
+    local env = options.env and wrapEnv(options.env)
     local luaSource = compileString(str, options)
-    local loader = loadCode(luaSource, options.env,
+    local loader = loadCode(luaSource, env,
         options.filename and ('@' .. options.filename) or str)
     return loader(...)
 end
@@ -1648,12 +1672,12 @@ local function repl(options)
         options.allowedGlobals = currentGlobalNames(opts.env)
     end
 
-    local env = opts.env or setmetatable({}, {
+    local env = opts.env and wrapEnv(opts.env) or setmetatable({}, {
         __index = _ENV or _G
     })
 
-    local function defaultReadChunk()
-        io.write('>> ')
+    local function defaultReadChunk(parserState)
+        io.write(parserState.stackSize > 0 and '.. ' or '>> ')
         io.flush()
         local input = io.read()
         return input and input .. '\n'
@@ -1688,11 +1712,48 @@ local function repl(options)
     -- Make parser
     local bytestream, clearstream = granulate(readChunk)
     local chars = {}
-    local read = parser(function()
-        local c = bytestream()
+    local read, reset = parser(function (parserState)
+        local c = bytestream(parserState)
         chars[#chars + 1] = c
         return c
     end)
+
+    local envdbg = (opts.env or _G)["debug"]
+    -- if the environment doesn't support debug.getlocal you can't save locals
+    local saveLocals = opts.saveLocals ~= false and envdbg and envdbg.getlocal
+    local saveSource = table.
+       concat({"local ___i___ = 1",
+               "while true do",
+               " local name, value = debug.getlocal(1, ___i___)",
+               " if(name and name ~= \"___i___\") then",
+               " ___replLocals___[name] = value",
+               " ___i___ = ___i___ + 1",
+               " else break end end"}, "\n")
+
+    local spliceSaveLocals = function(luaSource)
+        -- we do some source munging in order to save off locals from each chunk
+        -- and reintroduce them to the beginning of the next chunk, allowing
+        -- locals to work in the repl the way you'd expect them to.
+        env.___replLocals___ = env.___replLocals___ or {}
+        local splicedSource = {}
+        for line in luaSource:gmatch("([^\n]+)\n?") do
+            table.insert(splicedSource, line)
+        end
+        -- reintroduce locals from the previous time around
+        local bind = "local %s = ___replLocals___['%s']"
+        for name in pairs(env.___replLocals___) do
+            table.insert(splicedSource, 1, bind:format(name, name))
+        end
+        -- save off new locals at the end - if safe to do so (i.e. last line is a return)
+        if (string.match(splicedSource[#splicedSource], "^ *return .*$")) then
+            if (#splicedSource > 1) then
+                table.insert(splicedSource, #splicedSource, saveSource)
+            end
+        end
+        return table.concat(splicedSource, "\n")
+    end
+
+    local scope = makeScope(GLOBAL_SCOPE)
 
     -- REPL loop
     while true do
@@ -1702,16 +1763,21 @@ local function repl(options)
         if not ok then
             onError('Parse', parseok)
             clearstream()
+            reset()
         else
             if not parseok then break end -- eof
             local compileOk, luaSource = pcall(compile, x, {
                 sourcemap = opts.sourcemap,
-                source = srcstring
+                source = srcstring,
+                scope = scope,
             })
             if not compileOk then
                 clearstream()
                 onError('Compile', luaSource) -- luaSource is error message in this case
             else
+                if saveLocals then
+                    luaSource = spliceSaveLocals(luaSource)
+                end
                 local luacompileok, loader = pcall(loadCode, luaSource, env)
                 if not luacompileok then
                     clearstream()
@@ -1755,7 +1821,8 @@ local module = {
     dofile = dofile_fennel,
     macroLoaded = macroLoaded,
     path = "./?.fnl;./?/init.fnl",
-    traceback = traceback
+    traceback = traceback,
+    version = "0.1.1-dev",
 }
 
 local function searchModule(modulename)
@@ -1804,11 +1871,11 @@ local function makeCompilerEnv(ast, scope, parent)
         sym = sym,
         unpack = unpack,
         gensym = function() return sym(gensym(scope)) end,
-        [globalMangling("list?")] = isList,
-        [globalMangling("multi-sym?")] = isMultiSym,
-        [globalMangling("sym?")] = isSym,
-        [globalMangling("table?")] = isTable,
-        [globalMangling("varg?")] = isVarg,
+        ["list?"] = isList,
+        ["multi-sym?"] = isMultiSym,
+        ["sym?"] = isSym,
+        ["table?"] = isTable,
+        ["varg?"] = isVarg,
     }, { __index = _ENV or _G })
 end
 
@@ -1855,7 +1922,7 @@ SPECIALS['eval-compiler'] = function(ast, scope, parent)
     ast[1] = sym('do')
     local luaSource = compile(ast, { scope = makeScope(COMPILER_SCOPE) })
     ast[1] = oldFirst
-    local loader = loadCode(luaSource, makeCompilerEnv(ast, scope, parent))
+    local loader = loadCode(luaSource, wrapEnv(makeCompilerEnv(ast, scope, parent)))
     loader()
 end
 
@@ -1873,6 +1940,28 @@ local stdmacros = [===[
            (table.insert elt x)
            (set x elt))
          x)
+ "-?>" (fn [val ...]
+         (if (= 0 (# [...]))
+             val
+             (let [els [...]
+                   el (table.remove els 1)
+                   tmp (gensym)]
+               (table.insert el 2 tmp)
+               (list (sym :let) [tmp val]
+                     (list (sym :if) tmp
+                           (list (sym :-?>) el (unpack els))
+                           tmp)))))
+ "-?>>" (fn [val ...]
+          (if (= 0 (# [...]))
+              val
+              (let [els [...]
+                    el (table.remove els 1)
+                    tmp (gensym)]
+                (table.insert el tmp)
+                (list (sym :let) [tmp val]
+                      (list (sym :if) tmp
+                            (list (sym :-?>>) el (unpack els))
+                            tmp)))))
  :doto (fn [val ...]
          (let [name (gensym)
                form (list (sym :let) [name val])]
@@ -1881,9 +1970,6 @@ local stdmacros = [===[
              (table.insert form elt))
            (table.insert form name)
            form))
- :defn (fn [name args ...]
-         (assert (sym? name) "defn: function names must be symbols")
-         (list (sym :fn) name args ...))
  :when (fn [condition body1 ...]
          (assert body1 "expected body")
          (list (sym 'if') condition
