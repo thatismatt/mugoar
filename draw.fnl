@@ -94,7 +94,9 @@
        ;; TODO: only draw what is visible
        (draw.map state)
        (draw.entities state)
-       (when state.level.draw (state.level.draw state))))
+       (when state.level.draw (state.level.draw state))
+       (when (and state.debug.overlay state.debug.overlay.draw)
+         (state.debug.overlay.draw state))))
   ;; draw hud canvas
   (love.graphics.setCanvas state.layers.hud)
   (love.graphics.clear)

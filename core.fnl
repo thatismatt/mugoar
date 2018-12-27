@@ -4,34 +4,36 @@
 (local world (require "world"))
 (local camera (require "camera"))
 
-;; global for use at repl
-(global state
-  (let [world (world.new 20 10)]
-    {:world world
-     :camera {:main (camera.new world)}
-     :entities {} ;; entity-id -> entity
-     :selection {} ;; entity-id -> true (i.e. a set)
-     :hud {:w 400
-           :visible? false}
-     :level {}
-     :debug {:draw-bounding-box? false
-             :draw-fps? false}}))
-
-(fn set-level
-  [state level]
-  (set state.level (require (.. "level." level)))
-  (if state.level.init (state.level.init state)))
-
-;; (set-level state "units")
-(set-level state "nav-debug")
+(local core {})
 
 (fn window-resize [state w h]
   (set state.window {:w w :h h})
   (draw.resize state)
   (camera.window state))
 
-;; required for dynamic reloading of fennel modules
-(window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
+(fn core.init
+  [level]
+  ;; global for use at repl
+  (global state
+          {:entities {} ;; entity-id -> entity
+           :selection {} ;; entity-id -> true (i.e. a set)
+           :hud {:w 400
+                 :visible? false}
+           :level {}
+           :debug {:draw-bounding-box? false
+                   :draw-fps? false
+                   :overlay (require "nav-debug")}})
+  (world.init state 20 10) ;; TODO: move world dimensions to level
+  (camera.init state)
+  (window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
+  (when level
+    (set state.level (require (.. "level." level)))
+    (if state.level.init (state.level.init state)))
+  (when (and state.debug.overlay state.debug.overlay.init)
+    (state.debug.overlay.init state)))
+
+;; (core.init)
+(core.init "units")
 
 (fn love.load []
   (repl.start))
@@ -118,3 +120,5 @@
 ;; (fn love.mousereleased [x y button]
 ;;   (if (= button 1) left-click-release
 ;;       (= button 2) right-click-release))
+
+core

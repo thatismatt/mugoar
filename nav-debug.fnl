@@ -1,26 +1,25 @@
 (local nav (require "nav"))
 (local draw (require "draw"))
 
-(local level {:name :nav-debug
-              :goal [2 3]})
+(local nav-debug
+       {:goal [2 3]
+        :arrows {:N  [[0.4 0.8] [0.6 0.8] [0.5 0.2]]
+                 :NE [[0.7 0.3] [0.4 0.8] [0.2 0.6]]
+                 :E  [[0.2 0.4] [0.2 0.6] [0.8 0.5]]
+                 :SE [[0.7 0.7] [0.4 0.2] [0.2 0.4]]
+                 :S  [[0.4 0.2] [0.6 0.2] [0.5 0.8]]
+                 :SW [[0.3 0.7] [0.6 0.2] [0.8 0.4]]
+                 :W  [[0.8 0.4] [0.8 0.6] [0.2 0.5]]
+                 :NW [[0.3 0.3] [0.6 0.8] [0.8 0.6]]}})
 
-(fn level.init
+(fn nav-debug.init
   [state]
   (nav.init state)
-  (nav.run state level.goal))
+  (nav.run state nav-debug.goal))
 
-(set level.arrows {:N  [[0.4 0.8] [0.6 0.8] [0.5 0.2]]
-                   :NE [[0.7 0.3] [0.4 0.8] [0.2 0.6]]
-                   :E  [[0.2 0.4] [0.2 0.6] [0.8 0.5]]
-                   :SE [[0.7 0.7] [0.4 0.2] [0.2 0.4]]
-                   :S  [[0.4 0.2] [0.6 0.2] [0.5 0.8]]
-                   :SW [[0.3 0.7] [0.6 0.2] [0.8 0.4]]
-                   :W  [[0.8 0.4] [0.8 0.6] [0.2 0.5]]
-                   :NW [[0.3 0.3] [0.6 0.8] [0.8 0.6]]})
-
-(fn level.draw
+(fn nav-debug.draw
   [state]
-  (let [goal-hash (nav.hash level.goal)]
+  (let [goal-hash (nav.hash nav-debug.goal)]
     (for [i 1 state.world.w]
       (for [j 1 state.world.h]
         (let [dist (-> state.nav.integration (. goal-hash) (. i) (. j))
@@ -39,7 +38,7 @@
                   (draw.shape {:shape :polygon
                                :pts (if (= dist 0)
                                         [[0.3 0.3] [0.3 0.7] [0.7 0.7] [0.7 0.3]]
-                                        (. level.arrows flow))}
+                                        (. nav-debug.arrows flow))}
                               [(- i 1) (- j 1)]))))))))
 
-level
+nav-debug

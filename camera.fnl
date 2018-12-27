@@ -2,11 +2,11 @@
 
 (local camera {})
 
-(fn camera.new [world]
+(fn camera.init [state]
   ;; NOTE: padding of 10 cells around world
-  (let [c (gamera.new -10 -10 (+ world.w 20) (+ world.h 20))]
+  (let [c (gamera.new -10 -10 (+ state.world.w 20) (+ state.world.h 20))]
     (: c :setScale 64)
-    c))
+    (set state.camera {:main c})))
 
 (fn camera.window [state]
   ;; TODO: determine amount of window to use
