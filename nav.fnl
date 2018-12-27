@@ -1,4 +1,5 @@
 (local world (require "world"))
+(local units (require "units"))
 
 (local nav {})
 
@@ -48,6 +49,9 @@
         (tset state.nav.cost.static
               (nav.hash [x y])
               (-> (world.query-rect state (- x 1) (- y 1) 1 1)
+                  (lume.filter (fn [entity]
+                                 (let [unit (. units entity.unit)]
+                                   (= unit.category :building))))
                   (lume.count)
                   (~= 0)))))
     (tset state.nav.integration goal-hash [])
