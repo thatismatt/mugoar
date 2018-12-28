@@ -3,6 +3,7 @@
 (local draw (require "draw"))
 (local world (require "world"))
 (local camera (require "camera"))
+(local nav (require "nav"))
 
 (local core {})
 
@@ -25,6 +26,7 @@
                    :overlay (require "nav-debug")}})
   (world.init state 20 10) ;; TODO: move world dimensions to level
   (camera.init state)
+  (nav.init state)
   (window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
   (when level
     (set state.level (require (.. "level." level)))

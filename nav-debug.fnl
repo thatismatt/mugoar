@@ -14,7 +14,6 @@
 
 (fn nav-debug.init
   [state]
-  (nav.init state)
   (nav.run state nav-debug.goal))
 
 (fn nav-debug.draw
