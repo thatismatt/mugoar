@@ -40,7 +40,7 @@
 ;; cost fields are universal
 ;; integration fields are per destination
 ;;  - are they also per unit size?
-;; flow fields are per
+;; flow fields are per destination
 (fn nav.init-path
   [state [goal-x goal-y]]
   (let [goal-hash (nav.hash [goal-x goal-y])]
@@ -57,7 +57,6 @@
     (tset state.nav.integration goal-hash [])
     (for [x 1 state.world.w]
       (-> state.nav.integration (. goal-hash) (tset x []))
-      (tset state.nav.flow x [])
       (for [y 1 state.world.h]
         (-> state.nav.integration (. goal-hash) (. x) (tset y math.huge))
         (table.insert state.nav.open [x y])))
@@ -86,7 +85,9 @@
 (fn nav.flow
   [state goal]
   (let [goal-hash (nav.hash goal)]
+    (-> state.nav.flow (tset goal-hash []))
     (for [x 1 state.world.w]
+      (-> state.nav.flow (. goal-hash) (tset x []))
       (for [y 1 state.world.h]
         (let [min-n (-> (nav.neighbours state [x y])
                         (lume.map (fn [[nx ny]] {:n [nx ny]
@@ -95,7 +96,7 @@
                         (lume.first)
                         (. :n))
               flow (nav.direction [x y] min-n)]
-          (tset (. state.nav.flow x) y flow))))))
+          (-> state.nav.flow (. goal-hash) (. x) (tset y flow)))))))
 
 (fn nav.init
   [state]

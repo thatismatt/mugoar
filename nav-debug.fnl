@@ -22,7 +22,7 @@
     (for [i 1 state.world.w]
       (for [j 1 state.world.h]
         (let [dist (-> state.nav.integration (. goal-hash) (. i) (. j))
-              flow (-> state.nav.flow (. i) (. j))]
+              flow (-> state.nav.flow (. goal-hash) (. i) (. j))]
           (if (= dist math.huge)
               (do (love.graphics.setColor [0 0 1])
                   (draw.shape {:shape :polygon
