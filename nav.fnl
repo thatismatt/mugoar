@@ -46,6 +46,7 @@
   (let [goal-hash (nav.hash [goal-x goal-y])]
     (for [x 1 state.world.w]
       (for [y 1 state.world.h]
+        ;; TODO: other cost fields
         (tset state.nav.cost.static
               (nav.hash [x y])
               (-> (world.query-rect state (- x 1) (- y 1) 1 1)
@@ -74,6 +75,7 @@
       (-> (nav.neighbours state [px py])
           (lume.filter (fn [[nx ny]] (not (. state.nav.closed (nav.hash [nx ny])))))
           (lume.filter (fn [[nx ny]] (not (. state.nav.cost.static (nav.hash [nx ny]))))) ;; TODO: calculate costs - don't just remove them
+          ;; TODO: other cost fields
           (lume.map (fn [[nx ny]]
                       (let [old-n-dist (-> state.nav.integration (. goal-hash) (. nx) (. ny))
                             dist-delta (nav.euclidean [px py] [nx ny])
