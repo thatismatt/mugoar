@@ -168,12 +168,18 @@ end
 local function issymbolchar(b)
     return b > 32 and
         not delims[b] and
-        b ~= 127 and
-        b ~= 34 and
-        b ~= 39 and
-        b ~= 59 and
-        b ~= 44
+        b ~= 127 and -- "<BS>"
+        b ~= 34 and -- "\""
+        b ~= 39 and -- "'"
+        b ~= 59 and -- ";"
+        b ~= 44 and -- ","
+        b ~= 96 -- "`"
 end
+
+local prefixes = { -- prefix chars substituted while reading
+    [96] = 'quote', -- `
+    [64] = 'unquote' -- @
+}
 
 -- Parse one value given a function that
 -- returns sequential bytes. Will throw an error as soon
@@ -211,7 +217,7 @@ local function parser(getbyte, filename)
     end
 
     -- Parse stream
-    return function ()
+    return function()
 
         -- Dispatch when we complete a value
         local done, retval
@@ -219,6 +225,10 @@ local function parser(getbyte, filename)
             if #stack == 0 then
                 retval = v
                 done = true
+            elseif stack[#stack].prefix then
+                local stacktop = stack[#stack]
+                stack[#stack] = nil
+                return dispatch(list(sym(stacktop.prefix), v))
             else
                 table.insert(stack[#stack], v)
             end
@@ -298,6 +308,10 @@ local function parser(getbyte, filename)
                 local formatted = raw:gsub("[\1-\31]", function (c) return '\\' .. c:byte() end)
                 local loadFn = loadCode(('return %s'):format(formatted), nil, filename)
                 dispatch(loadFn())
+            elseif prefixes[b] then -- expand prefix byte into wrapping form eg. '`a' into '(quote a)'
+                table.insert(stack, {
+                    prefix = prefixes[b]
+                })
             else -- Try symbol
                 local chars = {}
                 local bytestart = byteindex
@@ -314,7 +328,7 @@ local function parser(getbyte, filename)
                     dispatch(rawstr:sub(2))
                 else
                     local forceNumber = rawstr:match('^%d')
-		    local numberWithStrippedUnderscores = rawstr:gsub("_", "")
+                    local numberWithStrippedUnderscores = rawstr:gsub("_", "")
                     local x
                     if forceNumber then
                         x = tonumber(numberWithStrippedUnderscores) or
@@ -918,16 +932,17 @@ local function destructure(to, from, ast, scope, parent, opts)
         elseif isTable(left) then -- table destructuring
             local s = gensym(scope)
             emit(parent, ("local %s = %s"):format(s, exprs1(rightexprs)), left)
-            for i, v in ipairs(left) do
-                if isSym(left[i]) and left[i][1] == "&" then
-                    assertCompile(not left[i+2],
+            for k, v in pairs(left) do
+                if isSym(left[k]) and left[k][1] == "&" then
+                    assertCompile(type(k) == "number" and not left[k+2],
                         "expected rest argument in final position", left)
-                    local subexpr = expr(('{(table.unpack or unpack)(%s, %s)}'):format(s, i),
+                    local subexpr = expr(('{(table.unpack or unpack)(%s, %s)}'):format(s, k),
                         'expression')
-                    destructure1(left[i+1], {subexpr}, left)
+                    destructure1(left[k+1], {subexpr}, left)
                     return
                 else
-                    local subexpr = expr(('%s[%d]'):format(s, i), 'expression')
+                    if type(k) ~= "number" then k = serializeString(k) end
+                    local subexpr = expr(('%s[%s]'):format(s, k), 'expression')
                     destructure1(v, {subexpr}, left)
                 end
             end
@@ -1529,6 +1544,88 @@ local function compile(ast, options)
     return flatten(chunk, options)
 end
 
+-- map a function across all pairs in a table
+local function quoteTmap(f, t)
+    local res = {}
+    for k,v in pairs(t) do
+        local nk, nv = f(k, v)
+        if nk then
+            res[nk] = nv
+        end
+    end
+    return res
+end
+
+-- make a transformer for key / value table pairs, preserving all numeric keys
+local function entryTransform(fk,fv)
+    return function(k, v)
+        if type(k) == 'number' then
+            return k,fv(v)
+        else
+            return fk(k),fv(v)
+        end
+    end
+end
+
+-- consume everything return nothing
+local function no() end
+
+local function mixedConcat(t, joiner)
+    local ret = ""
+    local s = ""
+    local seen = {}
+    for k,v in ipairs(t) do
+        table.insert(seen, k)
+        ret = ret .. s .. v
+        s = joiner
+    end
+    for k,v in pairs(t) do
+        if not(seen[k]) then
+            ret = ret .. s .. '[' .. k .. ']' .. '=' .. v
+            s = joiner
+        end
+    end
+    return ret
+end
+
+-- expand a quoted form into a data literal, evaluating unquote
+local function doQuote (form, scope, parent, runtime)
+    local q = function (x) return doQuote(x, scope, parent, runtime) end
+    -- symbol
+    if isSym(form) then
+        return ("sym('%s')"):format(deref(form))
+    -- unquote
+    elseif isList(form) and isSym(form[1]) and (deref(form[1]) == 'unquote') then
+        local payload = form[2]
+        local res = unpack(compile1(payload, scope, parent))
+        return res[1]
+    -- list
+    elseif isList(form) then
+        assertCompile(not runtime, "lists may only be used at compile time", form)
+        local mapped = quoteTmap(entryTransform(no, q), form)
+        return 'list(' .. mixedConcat(mapped, ", ") .. ')'
+    -- table
+    elseif type(form) == 'table' then
+        local mapped = quoteTmap(entryTransform(q, q), form)
+        return '{' .. mixedConcat(mapped, ", ") .. '}'
+    -- string
+    elseif type(form) == 'string' then
+        return serializeString(form)
+    else
+        return tostring(form)
+    end
+end
+
+SPECIALS['quote'] = function(ast, scope, parent)
+    assertCompile(#ast == 2, "quote only takes a single form")
+    local runtime, thisScope = true, scope
+    while thisScope do
+        thisScope = thisScope.parent
+        if thisScope == COMPILER_SCOPE then runtime = false end
+    end
+    return doQuote(ast[2], scope, parent, runtime)
+end
+
 local function compileStream(strm, options)
     options = options or {}
     local oldGlobals = allowedGlobals
@@ -1650,7 +1747,7 @@ local function eval(str, options, ...)
     return loader(...)
 end
 
-local function dofile_fennel(filename, options, ...)
+local function dofileFennel(filename, options, ...)
     options = options or {sourcemap = true}
     if options.allowedGlobals == nil then
         options.allowedGlobals = currentGlobalNames(options.env)
@@ -1818,7 +1915,7 @@ local module = {
     gensym = gensym,
     eval = eval,
     repl = repl,
-    dofile = dofile_fennel,
+    dofile = dofileFennel,
     macroLoaded = macroLoaded,
     path = "./?.fnl;./?/init.fnl",
     traceback = traceback,
@@ -1837,14 +1934,14 @@ local function searchModule(modulename)
     end
 end
 
-module.make_searcher = function(options)
+module.makeSearcher = function(options)
    return function(modulename)
       local opts = {}
       for k,v in pairs(options or {}) do opts[k] = v end
       local filename = searchModule(modulename)
       if filename then
          return function(modname)
-            return dofile_fennel(filename, opts, modname)
+            return dofileFennel(filename, opts, modname)
          end
       end
    end
@@ -1852,7 +1949,8 @@ end
 
 -- This will allow regular `require` to work with Fennel:
 -- table.insert(package.loaders, fennel.searcher)
-module.searcher = module.make_searcher()
+module.searcher = module.makeSearcher()
+module.make_searcher = module.makeSearcher -- oops backwards compatibility
 
 local function makeCompilerEnv(ast, scope, parent)
     return setmetatable({
@@ -1876,6 +1974,9 @@ local function makeCompilerEnv(ast, scope, parent)
         ["sym?"] = isSym,
         ["table?"] = isTable,
         ["varg?"] = isVarg,
+        ["in-scope?"] = function(symbol)
+            return scope.manglings[symbol]
+        end
     }, { __index = _ENV or _G })
 end
 
@@ -1903,8 +2004,9 @@ SPECIALS['require-macros'] = function(ast, scope, parent)
             local filename = assertCompile(searchModule(modname),
                                            modname .. " not found.", ast)
             local env = makeCompilerEnv(ast, scope, parent)
-            mod = dofile_fennel(filename, {
+            mod = dofileFennel(filename, {
                 env = env,
+                scope = COMPILER_SCOPE,
                 allowedGlobals = macroGlobals(env, currentGlobalNames())
             })
             macroLoaded[modname] = mod
@@ -1995,7 +2097,94 @@ local stdmacros = [===[
                                           (or a.filename "unknown")
                                           (or a.line "?"))))))
              (list (sym "fn") (unpack args))))
-}
+ :match
+(fn match [val ...]
+  ;; this function takes the AST of values and a single pattern and returns a
+  ;; condition to determine if it matches as well as a list of bindings to
+  ;; introduce for the duration of the body if it does match.
+  (fn match-pattern [vals pattern unifications]
+    ;; we have to assume we're matching against multiple values here until we
+    ;; know we're either in a multi-valued clause (in which case we know the #
+    ;; of vals) or we're not, in which case we only care about the first one.
+    (let [[val] vals]
+      (if (and (sym? pattern) ; unification with outer locals (or nil)
+               (or (in-scope? pattern)
+                   (= :nil (tostring pattern))))
+          (values (list (sym :=) val pattern) [])
+
+          ;; unify a local we've seen already
+          (and (sym? pattern)
+               (. unifications (tostring pattern)))
+          (values (list (sym :=) (. unifications (tostring pattern)) val) [])
+
+          ;; bind a fresh local
+          (sym? pattern)
+          (do (if (~= (tostring pattern) "_")
+                  (tset unifications (tostring pattern) val))
+              (values (if (: (tostring pattern) :find "^?")
+                          true (list (sym :~=) (sym :nil) val))
+                      [pattern val]))
+
+          ;; multi-valued patterns (represented as lists)
+          (list? pattern)
+          (let [condition (list (sym :and))
+                bindings []]
+            (each [i pat (ipairs pattern)]
+              (let [(subcondition subbindings) (match-pattern [(. vals i)] pat
+                                                              unifications)]
+                (table.insert condition subcondition)
+                (each [_ b (ipairs subbindings)]
+                  (table.insert bindings b))))
+            (values condition bindings))
+
+          ;; table patterns)
+          (= (type pattern) :table)
+          (let [condition (list (sym :and)
+                                (list (sym :=) (list (sym :type) val) :table))
+                bindings []]
+            (each [k pat (pairs pattern)]
+              (assert (not (varg? pat)) "TODO: match against varg not implemented")
+              (let [subval (list (sym :.) val k)
+                    (subcondition subbindings) (match-pattern [subval] pat
+                                                              unifications)]
+                (table.insert condition subcondition)
+                (each [_ b (ipairs subbindings)]
+                  (table.insert bindings b))))
+            (values condition bindings))
+
+          ;; literal value
+          (values (list (sym "=") val pattern) []))))
+
+  (fn match-condition [vals clauses]
+    (let [out (list (sym :if))]
+      (for [i 1 (# clauses) 2]
+        (let [pattern (. clauses i)
+              body (. clauses (+ i 1))
+              (condition bindings) (match-pattern vals pattern {})]
+          (table.insert out condition)
+          (table.insert out (list (sym :let) bindings body))))
+      out))
+
+  ;; how many multi-valued clauses are there? return a list of that many gensyms
+  (fn val-syms [clauses]
+    (let [syms (list (gensym))]
+      (for [i 1 (# clauses) 2]
+        (if (list? (. clauses i))
+            (each [valnum (ipairs (. clauses i))]
+              (if (not (. syms valnum))
+                  (tset syms valnum (gensym))))))
+      syms))
+
+  ;; wrap it in a way that prevents double-evaluation of the matched value
+  (let [clauses [...]
+        vals (val-syms clauses)]
+    (if (~= 0 (% (# clauses) 2)) ; treat odd final clause as default
+        (table.insert clauses (# clauses) (sym :_)))
+    ;; protect against multiple evaluation of the value, bind against as
+    ;; many values as we ever match against in the clauses.
+    (list (sym :let) [vals val]
+          (match-condition vals clauses))))
+ }
 ]===]
 do
     local env = makeCompilerEnv(nil, GLOBAL_SCOPE, {})
