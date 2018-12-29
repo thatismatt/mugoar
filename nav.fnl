@@ -79,6 +79,12 @@
                       (when (> old-n-dist n-dist)
                         (-> state.nav.integration (. request.hash) (. nx) (tset ny n-dist)))))))))
 
+(fn nav.integration
+  [state request]
+  (nav.integration-init state request)
+    (while (fu.not-empty? request.open)
+      (nav.integration-step state request)))
+
 (fn nav.flow
   [state request]
   (-> state.nav.flow (tset request.hash []))
@@ -114,9 +120,7 @@
   [state destination]
   (nav.cost state)
   (let [request (nav.request destination)]
-    (nav.integration-init state request)
-    (while (not (= (# request.open) 0))
-      (nav.integration-step state request))
+    (nav.integration state request)
     (nav.flow state request)))
 
 nav
