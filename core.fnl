@@ -62,6 +62,8 @@
                             (set entity.speed unit.speed))))))))
 
 (fn love.update [dt]
+  (when (< dt (/ 1 30))
+    (love.timer.sleep (- (/ 1 30) dt))) ;; crude 30fps limit
   (if (love.keyboard.isDown "=")     (camera.zoom state dt :in)
       (love.keyboard.isDown "-")     (camera.zoom state dt :out))
   (if (love.keyboard.isDown "up")    (camera.move state dt :up)
