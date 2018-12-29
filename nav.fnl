@@ -52,11 +52,7 @@
                 10
                 1)))))
 
-;; cost fields are universal
-;; integration fields are per destination
-;;  - are they also per unit size?
-;; flow fields are per destination
-(fn nav.init-path
+(fn nav.integration-init
   [state request]
   (tset state.nav.integration request.hash [])
   (for [x 1 state.world.w]
@@ -66,7 +62,7 @@
       (table.insert request.open [x y])))
   (-> state.nav.integration (. request.hash) (. request.x) (tset request.y 0)))
 
-(fn nav.step
+(fn nav.integration-step
   [state request]
   (table.sort request.open (fn [[ax ay] [bx by]]
                              (let [ac (-> state.nav.integration (. request.hash) (. ax) (. ay))
@@ -121,9 +117,9 @@
   [state destination]
   (nav.cost state)
   (let [request (nav.request destination)]
-    (nav.init-path state request)
+    (nav.integration-init state request)
     (while (not (= (# request.open) 0))
-      (nav.step state request))
+      (nav.integration-step state request))
     (nav.flow state request)))
 
 nav
