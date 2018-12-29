@@ -43,24 +43,6 @@
 (fn love.draw []
   (draw.draw state))
 
-(fn update-entities [state]
-  (-> state.entities
-      (lume.filter (fn [e] (and e.commands
-                                (> (lume.count e.commands) 0))))
-      (lume.map (fn [entity]
-                  (let [[px py] (lume.first entity.commands)
-                        unit (. units entity.unit)
-                        [uw uh] unit.size
-                        [rx ry] (world.position state entity)
-                        [ex ey] [(+ rx (/ uw 2)) (+ ry (/ uh 2))]
-                        [dx dy] [(- px ex) (- py ey)]]
-                    (if (< (+ (* dx dx) (* dy dy)) 0.01)
-                        (do (table.remove entity.commands 1)
-                            (set entity.heading nil)
-                            (set entity.speed nil))
-                        (do (set entity.heading (math.atan2 dy dx))
-                            (set entity.speed unit.speed))))))))
-
 (fn love.update [dt]
   (when (< dt (/ 1 30))
     (love.timer.sleep (- (/ 1 30) dt))) ;; crude 30fps limit
@@ -70,7 +52,7 @@
       (love.keyboard.isDown "down")  (camera.move state dt :down))
   (if (love.keyboard.isDown "left")  (camera.move state dt :left)
       (love.keyboard.isDown "right") (camera.move state dt :right))
-  (update-entities state)
+  (world.update-entities state)
   (world.move-entities state dt))
 
 (fn love.resize [w h]

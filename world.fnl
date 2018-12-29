@@ -35,6 +35,22 @@
         new-y (+ y (* (math.sin entity.heading) entity.speed dt))]
     (: state.world.physics :move entity new-x new-y on-collide)))
 
+(fn world.update-entities [state]
+  (-> state.entities
+      (lume.filter (fn [entity] (-?> entity.commands (fu.not-empty?))))
+      (lume.map (fn [entity]
+                  (let [[px py] (lume.first entity.commands)
+                        {:size [uw uh] :speed speed} (. units entity.unit)
+                        [rx ry] (world.position state entity)
+                        [ex ey] [(+ rx (/ uw 2)) (+ ry (/ uh 2))]
+                        [dx dy] [(- px ex) (- py ey)]]
+                    (if (< (+ (* dx dx) (* dy dy)) 0.01)
+                        (do (table.remove entity.commands 1)
+                            (set entity.heading nil)
+                            (set entity.speed nil))
+                        (do (set entity.heading (math.atan2 dy dx))
+                            (set entity.speed speed))))))))
+
 (fn world.move-entities [state dt]
   (-> state.entities
       (lume.filter :speed)
