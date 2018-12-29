@@ -46,4 +46,14 @@
                 :pts [[1 -0.1] [1.8 0.2] [1 0.2]]}]
       :size [2 1]})
 
+(fn units.category? [entity category]
+  (let [unit (. units entity.unit)]
+    (= unit.category category)))
+
+(fn units.building? [entity]
+  (units.category? entity :building))
+
+(fn units.vehicle? [entity]
+  (units.category? entity :vehicle))
+
 units
