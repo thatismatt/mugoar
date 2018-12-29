@@ -71,15 +71,13 @@
   (let [[px py] (table.remove request.open 1)
         p-dist (-> state.nav.integration (. request.hash) (. px) (. py))]
     (-> (nav.neighbours state [px py])
-        (lume.filter (fn [[nx ny]] (not (. request.closed (nav.hash [nx ny])))))
         (lume.map (fn [[nx ny]]
                     (let [old-n-dist (-> state.nav.integration (. request.hash) (. nx) (. ny))
                           dist-delta (nav.euclidean [px py] [nx ny])
                           n-cost (. state.nav.cost.static (nav.hash [nx ny])) ;; TODO: other cost fields
                           n-dist (+ p-dist (* dist-delta n-cost))]
                       (when (> old-n-dist n-dist)
-                        (-> state.nav.integration (. request.hash) (. nx) (tset ny n-dist)))))))
-    (tset request.closed (nav.hash [px py]) true)))
+                        (-> state.nav.integration (. request.hash) (. nx) (tset ny n-dist)))))))))
 
 (fn nav.flow
   [state request]
@@ -110,8 +108,7 @@
   {:x x
    :y y
    :hash (nav.hash [x y])
-   :open []
-   :closed {}})
+   :open []})
 
 (fn nav.run
   [state destination]
