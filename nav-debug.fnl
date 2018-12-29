@@ -2,7 +2,7 @@
 (local draw (require "draw"))
 
 (local nav-debug
-       {:goal [2 3]
+       {:goal [13 8]
         :arrows {:N  [[0.4 0.8] [0.6 0.8] [0.5 0.2]]
                  :NE [[0.7 0.3] [0.4 0.8] [0.2 0.6]]
                  :E  [[0.2 0.4] [0.2 0.6] [0.8 0.5]]
@@ -23,21 +23,12 @@
       (for [j 1 state.world.h]
         (let [dist (-> state.nav.integration (. goal-hash) (. i) (. j))
               flow (-> state.nav.flow (. goal-hash) (. i) (. j))]
-          (if (= dist math.huge)
-              (do (love.graphics.setColor [0 0 1])
-                  (draw.shape {:shape :polygon
-                               :pts [[0.3 0.3] [0.3 0.7] [0.7 0.7] [0.7 0.3]]}
-                              [(- i 1) (- j 1)]))
-              flow
-              (do (love.graphics.setColor [1 0 0 (/ dist 20)])
-                  (draw.shape {:shape :polygon
-                               :pts [[0.1 0.1] [0.1 0.9] [0.9 0.9] [0.9 0.1]]}
-                              [(- i 1) (- j 1)])
-                  (love.graphics.setColor [0 1 0 0.7])
-                  (draw.shape {:shape :polygon
-                               :pts (if (= dist 0)
-                                        [[0.3 0.3] [0.3 0.7] [0.7 0.7] [0.7 0.3]]
-                                        (. nav-debug.arrows flow))}
-                              [(- i 1) (- j 1)]))))))))
+          (when flow
+            (love.graphics.setColor [0 1 0 0.7])
+            (draw.shape {:shape :polygon
+                         :pts (if (= dist 0) ;; i.e. this is the destination
+                                  [[0.3 0.3] [0.3 0.7] [0.7 0.7] [0.7 0.3]]
+                                  (. nav-debug.arrows flow))}
+                        [(- i 1) (- j 1)])))))))
 
 nav-debug

@@ -44,12 +44,13 @@
       ;; TODO: other cost fields
       (tset state.nav.cost.static
             (nav.hash [x y])
-            (-> (world.query-rect state (- x 1) (- y 1) 1 1)
-                (lume.filter (fn [entity]
-                               (let [unit (. units entity.unit)]
-                                 (= unit.category :building))))
-                (lume.count)
-                (~= 0))))))
+            (if (->> (world.query-rect state (- x 1) (- y 1) 1 1)
+                     (fu.any? units.building?))
+                20
+                (->> (world.query-rect state (- x 2) (- y 2) 3 3)
+                     (fu.any? units.building?))
+                10
+                1)))))
 
 ;; cost fields are universal
 ;; integration fields are per destination
@@ -75,12 +76,11 @@
         p-dist (-> state.nav.integration (. request.hash) (. px) (. py))]
     (-> (nav.neighbours state [px py])
         (lume.filter (fn [[nx ny]] (not (. request.closed (nav.hash [nx ny])))))
-        (lume.filter (fn [[nx ny]] (not (. state.nav.cost.static (nav.hash [nx ny]))))) ;; TODO: calculate costs - don't just remove them
-        ;; TODO: other cost fields
         (lume.map (fn [[nx ny]]
                     (let [old-n-dist (-> state.nav.integration (. request.hash) (. nx) (. ny))
                           dist-delta (nav.euclidean [px py] [nx ny])
-                          n-dist (+ p-dist dist-delta)]
+                          n-cost (. state.nav.cost.static (nav.hash [nx ny])) ;; TODO: other cost fields
+                          n-dist (+ p-dist (* dist-delta n-cost))]
                       (when (> old-n-dist n-dist)
                         (-> state.nav.integration (. request.hash) (. nx) (tset ny n-dist)))))))
     (tset request.closed (nav.hash [px py]) true)))
