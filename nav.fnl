@@ -1,19 +1,10 @@
 (local world (require "world"))
 (local units (require "units"))
+(local utils (require "utils"))
 
 (local nav {})
 
 ;; ref: http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter23_Crowd_Pathfinding_and_Steering_Using_Flow_Field_Tiles.pdf
-
-(fn nav.hash
-  [[x y]]
-  (.. x "-" y))
-
-(fn nav.euclidean
-  [[x1 y1] [x2 y2]]
-  (let [dx (- x2 x1)
-        dy (- y2 y1)]
-    (+ (* dx dx) (* dy dy))))
 
 (fn nav.neighbours
   [state [x y]]
@@ -43,7 +34,7 @@
     (for [y 1 state.world.h]
       ;; TODO: other cost fields
       (tset state.nav.cost.static
-            (nav.hash [x y])
+            (utils.hash [x y])
             (if (->> (world.query-rect state (- x 1) (- y 1) 1 1)
                      (fu.any? units.building?))
                 20
@@ -73,8 +64,8 @@
     (-> (nav.neighbours state [px py])
         (lume.map (fn [[nx ny]]
                     (let [old-n-dist (-> state.nav.integration (. request.hash) (. nx) (. ny))
-                          dist-delta (nav.euclidean [px py] [nx ny])
-                          n-cost (. state.nav.cost.static (nav.hash [nx ny])) ;; TODO: other cost fields
+                          dist-delta (utils.euclidean [px py] [nx ny])
+                          n-cost (. state.nav.cost.static (utils.hash [nx ny])) ;; TODO: other cost fields
                           n-dist (+ p-dist (* dist-delta n-cost))]
                       (when (> old-n-dist n-dist)
                         (-> state.nav.integration (. request.hash) (. nx) (tset ny n-dist)))))))))
@@ -113,7 +104,7 @@
   [[x y]]
   {:x x
    :y y
-   :hash (nav.hash [x y])
+   :hash (utils.hash [x y])
    :open []})
 
 (fn nav.run

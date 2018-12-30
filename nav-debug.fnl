@@ -1,5 +1,6 @@
 (local nav (require "nav"))
 (local draw (require "draw"))
+(local utils (require "utils"))
 
 (local nav-debug
        {:goal [13 8]
@@ -18,7 +19,7 @@
 
 (fn nav-debug.draw
   [state]
-  (let [goal-hash (nav.hash nav-debug.goal)]
+  (let [goal-hash (utils.hash nav-debug.goal)]
     (for [i 1 state.world.w]
       (for [j 1 state.world.h]
         (let [dist (-> state.nav.integration (. goal-hash) (. i) (. j))
