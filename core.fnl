@@ -4,6 +4,9 @@
 (local world (require "world"))
 (local camera (require "camera"))
 (local nav (require "nav"))
+(local utils (require "utils"))
+
+(local nav-debug (require "nav-debug"))
 
 (local core {})
 
@@ -23,7 +26,7 @@
            :level {}
            :debug {:draw-bounding-box? false
                    :draw-fps? false
-                   :overlay (require "nav-debug")}})
+                   :overlay nav-debug}})
   (world.init state 20 10) ;; TODO: move world dimensions to level
   (camera.init state)
   (nav.init state)
@@ -73,6 +76,8 @@
               (let [entity (. state.entities entity-id)
                     unit (. units entity.unit)]
                 (when (= unit.category :vehicle)
+                  (nav.run state (utils.nearest-cell pt))
+                  (set nav-debug.goal (utils.nearest-cell pt)) ;; XXX: display last flow field
                   (if shift?
                       (table.insert entity.commands pt)
                       (set entity.commands [pt])))))))

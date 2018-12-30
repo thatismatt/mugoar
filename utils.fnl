@@ -16,4 +16,8 @@
   [[x y]]
   (.. x "-" y))
 
+(fn utils.nearest-cell
+  [[x y]]
+  [(math.floor (+ x 1)) (math.floor (+ y 1))])
+
 utils
