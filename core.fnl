@@ -2,6 +2,7 @@
 (local units (require "units"))
 (local draw (require "draw"))
 (local world (require "world"))
+(local entity (require "entity"))
 (local camera (require "camera"))
 (local nav (require "nav"))
 (local utils (require "utils"))
@@ -55,8 +56,8 @@
       (love.keyboard.isDown "down")  (camera.move state dt :down))
   (if (love.keyboard.isDown "left")  (camera.move state dt :left)
       (love.keyboard.isDown "right") (camera.move state dt :right))
-  (world.update-entities state)
-  (world.move-entities state dt))
+  (entity.update-entities state)
+  (entity.move-entities state dt))
 
 (fn love.resize [w h]
   (window-resize state w h))
@@ -76,8 +77,6 @@
               (let [entity (. state.entities entity-id)
                     unit (. units entity.unit)]
                 (when (= unit.category :vehicle)
-                  (nav.run state (utils.nearest-cell pt))
-                  (set nav-debug.goal (utils.nearest-cell pt)) ;; XXX: display last flow field
                   (if shift?
                       (table.insert entity.commands pt)
                       (set entity.commands [pt])))))))
