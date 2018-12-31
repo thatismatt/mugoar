@@ -78,6 +78,19 @@
       (lume.filter :speed)
       (lume.map (fn [e] (world.move state dt e (fn [x y] :slide))))))
 
+(fn world.neighbours
+  [state [x y]]
+  (let [t []]
+    (for [tx (- x 1) (+ x 1)]
+      (for [ty (- y 1) (+ y 1)]
+        (when (and (> tx 0)
+                   (> ty 0)
+                   (<= tx state.world.w)
+                   (<= ty state.world.h)
+                   (not (and (= x tx) (= y ty))))
+          (table.insert t [tx ty]))))
+    t))
+
 (fn world.position [state entity]
   [(: state.world.physics :getRect entity)])
 

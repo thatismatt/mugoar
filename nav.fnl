@@ -6,19 +6,6 @@
 
 ;; ref: http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter23_Crowd_Pathfinding_and_Steering_Using_Flow_Field_Tiles.pdf
 
-(fn nav.neighbours
-  [state [x y]]
-  (let [t []]
-    (for [tx (- x 1) (+ x 1)]
-      (for [ty (- y 1) (+ y 1)]
-        (when (and (> tx 0)
-                   (> ty 0)
-                   (<= tx state.world.w)
-                   (<= ty state.world.h)
-                   (not (and (= x tx) (= y ty))))
-          (table.insert t [tx ty]))))
-    t))
-
 (fn nav.direction
   [[fx fy] [tx ty]]
   (.. (if (< ty fy) "N"
@@ -61,7 +48,7 @@
                                (< ac bc))))
   (let [[px py] (table.remove request.open 1)
         p-dist (-> state.nav.integration (. request.hash) (. px) (. py))]
-    (-> (nav.neighbours state [px py])
+    (-> (world.neighbours state [px py])
         (lume.map (fn [[nx ny]]
                     (let [old-n-dist (-> state.nav.integration (. request.hash) (. nx) (. ny))
                           dist-delta (utils.euclidean [px py] [nx ny])
@@ -82,7 +69,7 @@
   (for [x 1 state.world.w]
     (-> state.nav.flow (. request.hash) (tset x []))
     (for [y 1 state.world.h]
-      (let [min-n (-> (nav.neighbours state [x y])
+      (let [min-n (-> (world.neighbours state [x y])
                       (lume.map (fn [[nx ny]] {:n [nx ny]
                                                :d (-> state.nav.integration (. request.hash) (. nx) (. ny))}))
                       (lume.sort :d)
