@@ -1,5 +1,13 @@
 (local fu {})
 
+(fn fu.remove
+  [p? tbl]
+  (let [r []]
+    (each [k v (pairs tbl)]
+      (when (not (p? v))
+        (tset r k v)))
+    r))
+
 (fn fu.any?
   [p? tbl]
   ;; TODO: early exit
