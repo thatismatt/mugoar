@@ -1,0 +1,43 @@
+#+TITLE: Mugoar - by Matt, Orson & Guinny
+
+* To Do
+** Terrain/Map
+ - [ ] draw terrain features
+** Path Finding
+ - [ ] cost fields for permanent (terrain) features
+ - [ ] account for unit width somehow, e.g. can't move diagonally if horizontal & vertical neighbours are impassable
+   - cost fields could be per unit width
+ - [ ] dynamically recalculate integration & flow fields as units move
+   - flow fields could be lazily calculated - they only depend on the integration field
+ - [ ] flow field directions should account for empty space i.e. more direct heading
+   - see LOS (line of sight) Pass in Game AI Pro 23.6.2
+ - [ ] expire old flow fields
+** Interaction - Mouse/Keys
+ - [ ] choose entity action depending on what is at pt e.g. attack vs move
+ - [ ] mouse scroll to zoom
+ - [ ] mouse click & drag to move around map
+** Vehicle Commands
+ - [ ] support different command types
+ - [ ] patrol
+ - [ ] attack
+** Units
+*** Buildings
+ - [ ] power-station
+ - [ ] mine
+*** Vehicles
+ - [ ] artillery
+** Bugs
+ - [ ] units can overshoot destination, especially for slow frame rates
+ - [ ] clicking outside the map can crash the game
+* Rear View
+** DONE cost fields for dynamic (vehicles)
+** DONE use flow fields for unit movement
+ - lookup intermediate points en-route to command points
+ - calculate flow fields on demand
+ - units use flow field to move to next destination
+** DONE use cost fields when calculating the integration field - don't just exclude them
+** DONE proper isolation nav open & close states as a nav request
+** DONE turn =nav-debug= in to an "overlay" i.e. independent from the notion of level
+** DONE encapsulate access of =state.world.physics= in =core= & =nav=, =:getRect= & =:queryRect=
+** DONE proper static cost field
+ - not just some random cells
