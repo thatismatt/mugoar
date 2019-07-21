@@ -1,36 +1,57 @@
 require("love.event")
+local fennel = require("lib.fennel")
 local view = require("lib.fennelview")
 local event, channel = ...
+local function display(s)
+  io.write(s)
+  return io.flush()
+end
+local function prompt()
+  return display("\n>> ")
+end
+local function read_chunk()
+  local input = io.read()
+  if input then
+    return (input .. "\n")
+  end
+end
+local input = ""
 local function _0_(...)
   if channel then
+    local bytestream, clearstream = fennel.granulate(read_chunk)
+    local read = read
     local function _0_()
-      io.write("> ")
-      io.flush()
-      return io.read("*l")
+      local c = (bytestream() or 10)
+      input = (input .. string.char(c))
+      return c
     end
-    local prompt = _0_
-    local function looper(input)
-      if input then
-        love.event.push(event, input)
-        print(channel:demand())
-        return looper(prompt())
+    read = fennel.parser(_0_)
+    while true do
+      prompt()
+      input = ""
+      do
+        local ok, ast = pcall(read)
+        if not ok then
+          display(("Parse error:" .. ast .. "\n"))
+        else
+          love.event.push(event, input)
+          display(channel:demand())
+        end
       end
     end
-    return looper(prompt())
+    return nil
   end
 end
 _0_(...)
 local function start_repl()
   local code = love.filesystem.read("repl.fnl")
-  local function _1_()
-    if code then
-      return love.filesystem.newFileData(fennel.compileString(code), "io")
-    else
-      return love.filesystem.read("lib/repl.lua")
-    end
+  local lua_src = nil
+  if code then
+    lua_src = love.filesystem.newFileData(fennel.compileString(code), "io")
+  else
+    lua_src = love.filesystem.read("lib/repl.lua")
   end
-  local lua = _1_()
-  local thread = love.thread.newThread(lua)
+  local thread = love.thread.newThread(lua_src)
   local io_channel = love.thread.newChannel()
   thread:start("eval", io_channel)
   local function _2_(input)

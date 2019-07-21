@@ -1,4 +1,5 @@
 (require "love.event")
+(local fennel (require "lib.fennel"))
 (local view (require "lib.fennelview"))
 
 ;; This module exists in order to expose stdio over a channel so that it
@@ -6,22 +7,47 @@
 
 (local (event channel) ...)
 
+(fn display [s]
+  (io.write s)
+  (io.flush))
+
+(fn prompt []
+  (display "\n>> "))
+
+(fn read-chunk []
+  (let [input (io.read)]
+    (when input
+      (.. input "\n"))))
+
+(var input "")
 (when channel
-  (let [prompt (fn [] (io.write "> ") (io.flush) (io.read "*l"))]
-    ((fn looper [input]
-       (when input
-         ;; This is consumed by love.handlers[event]
-         (love.event.push event input)
-         (print (: channel :demand))
-         (looper (prompt)))) (prompt))))
+  (let [(bytestream clearstream) (fennel.granulate read-chunk)
+        read (fennel.parser
+              (fn []
+                (let [c (or (bytestream) 10)]
+                  (set input (.. input (string.char c)))
+                  c)))]
+    (while true
+      (prompt)
+      (set input "")
+      (let [(ok ast) (pcall read)]
+        (if (not ok)
+            (do
+              (display (.. "Parse error:" ast "\n"))
+              ;; fixme: not sure why the following fails
+              ;; (clearstream)
+              )
+            (do
+              (love.event.push event input)
+              (display (: channel :demand))))))))
 
 {:start (fn start-repl []
           (let [code (love.filesystem.read "repl.fnl")
-                lua (if code
+                lua-src (if code
                         (love.filesystem.newFileData
                          (fennel.compileString code) "io")
                         (love.filesystem.read "lib/repl.lua"))
-                thread (love.thread.newThread lua)
+                thread (love.thread.newThread lua-src)
                 io-channel (love.thread.newChannel)]
             ;; this thread will send "eval" events for us to consume:
             (: thread :start "eval" io-channel)
