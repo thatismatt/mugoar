@@ -3,6 +3,7 @@
 * To Do
 ** Terrain/Map
  - [ ] draw terrain features
+   - perlin noise
 ** Path Finding
  - [ ] cost fields for permanent (terrain) features
  - [ ] account for unit width somehow, e.g. can't move diagonally if horizontal & vertical neighbours are impassable

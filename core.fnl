@@ -11,7 +11,7 @@
 
 (local core {})
 
-(fn window-resize [state w h]
+(fn core.window-resize [state w h]
   (set state.window {:w w :h h})
   (draw.resize state)
   (camera.window state))
@@ -31,7 +31,7 @@
   (world.init state 20 10) ;; TODO: move world dimensions to level
   (camera.init state)
   (nav.init state)
-  (window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
+  (core.window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
   (when level
     (set state.level (require (.. "level." level)))
     (if state.level.init (state.level.init state)))
@@ -60,7 +60,7 @@
   (entity.move-entities state dt))
 
 (fn love.resize [w h]
-  (window-resize state w h))
+  (core.window-resize state w h))
 
 (fn love.keypressed [key]
   (if (or (= key "escape")
@@ -70,7 +70,7 @@
       (= key "f11")
       (love.window.setFullscreen (not (love.window.getFullscreen)))))
 
-(fn entity-action [state pt shift?]
+(fn core.entity-action [state pt shift?]
   ;; TODO: choose action depending on what is at pt
   (lume.map (lume.keys state.selection)
             (fn [entity-id]
@@ -81,7 +81,7 @@
                       (table.insert entity.commands pt)
                       (set entity.commands [pt])))))))
 
-(fn mouse-pressed [state button wx wy]
+(fn core.mouse-pressed [state button wx wy]
   (let [selection (-> (world.query-point state wx wy 0.2)
                       (lume.map :id))
         old-n (lume.count state.selection)
@@ -89,7 +89,7 @@
         shift? (love.keyboard.isDown "lshift" "rshift")]
     (if (and (not (= old-n 0))
              (= new-n 0))
-        (entity-action state [wx wy] shift?)
+        (core.entity-action state [wx wy] shift?)
         (and shift?
              (= new-n 1)
              (. state.selection (. selection 1)))
@@ -102,7 +102,7 @@
 (fn love.mousepressed [x y button]
   (if (= button 1)
       (let [[wx wy] [(: state.camera.main :toWorld x y)]]
-        (mouse-pressed state button wx wy))
+        (core.mouse-pressed state button wx wy))
       (= button 2)
       (set state.selection {})))
 
