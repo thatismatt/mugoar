@@ -22,6 +22,6 @@
 
 (fn fu.not-empty?
   [tbl]
-  (~= nil ((pairs tbl) tbl)))
+  (not= nil ((pairs tbl) tbl)))
 
 fu

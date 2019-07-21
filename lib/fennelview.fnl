@@ -1,13 +1,13 @@
 ;; A pretty-printer that outputs tables in Fennel syntax.
 ;; Loosely based on inspect.lua: http://github.com/kikito/inspect.lua
 
-(local view-quote (fn [str] (.. '"' (: str :gsub '"' '\\"') '"')))
+(fn view-quote [str] (.. "\"" (: str :gsub "\"" "\\\"") "\""))
 
 (local short-control-char-escapes
        {"\a" "\\a" "\b" "\\b" "\f" "\\f" "\n" "\\n"
         "\r" "\\r" "\t" "\\t" "\v" "\\v"})
 
-(local long-control-char-esapes
+(local long-control-char-escapes
        (let [long {}]
          (for [i 0 31]
            (let [ch (string.char i)]
@@ -18,7 +18,7 @@
 
 (fn escape [str]
   (let [str (: str :gsub "\\" "\\\\")
-        str (: str :gsub "(%c)%f[0-9]" long-control-char-esapes)]
+        str (: str :gsub "(%c)%f[0-9]" long-control-char-escapes)]
     (: str :gsub "%c" short-control-char-escapes)))
 
 (fn sequence-key? [k len]
@@ -32,7 +32,7 @@
 
 (fn sort-keys [a b]
   (let [ta (type a) tb (type b)]
-    (if (and (= ta tb) (~= ta "boolean")
+    (if (and (= ta tb) (not= ta "boolean")
              (or (= ta "string") (= ta "number")))
         (< a b)
         (let [dta (. type-order a)
@@ -78,7 +78,7 @@
 
 (fn tabify [self] (puts self "\n" (: self.indent :rep self.level)))
 
-(fn already-visited? [self v] (~= (. self.ids v) nil))
+(fn already-visited? [self v] (not= (. self.ids v) nil))
 
 (fn get-id [self v]
   (var id (. self.ids v))
@@ -89,10 +89,10 @@
       (tset self.ids v id)))
   (tostring id))
 
-(fn put-sequential-table [self t length]
+(fn put-sequential-table [self t len]
   (puts self "[")
   (set self.level (+ self.level 1))
-  (for [i 1 length]
+  (for [i 1 len]
     (puts self " ")
     (put-value self (. t i)))
   (set self.level (- self.level 1))
@@ -100,16 +100,23 @@
 
 (fn put-key [self k]
   (if (and (= (type k) "string")
-           (: k :find "^[-%w?\\^_`!#$%&*+./@~:|<=>]+$"))
+           (: k :find "^[-%w?\\^_!$%&*+./@:|<=>]+$"))
       (puts self ":" k)
       (put-value self k)))
 
-(fn put-kv-table [self t]
+(fn put-kv-table [self t ordered-keys]
   (puts self "{")
   (set self.level (+ self.level 1))
-  (each [k v (pairs t)]
+  ;; first, output sorted nonsequential keys
+  (each [_ k (ipairs ordered-keys)]
     (tabify self)
     (put-key self k)
+    (puts self " ")
+    (put-value self (. t k)))
+  ;; next, output any sequential keys
+  (each [i v (ipairs t)]
+    (tabify self)
+    (put-key self i)
     (puts self " ")
     (put-value self v))
   (set self.level (- self.level 1))
@@ -122,16 +129,19 @@
       (>= self.level self.depth)
       (puts self "{...}")
       :else
-      (let [(non-seq-keys length) (get-nonsequential-keys t)
+      (let [(non-seq-keys len) (get-nonsequential-keys t)
             id (get-id self t)]
-        (if (> (. self.appearances t) 1)
+        ;; fancy metatable stuff can result in self.appearances not including a
+        ;; table, so if it's not found, assume we haven't seen it; we can't do
+        ;; cycle detection in that case.
+        (if (and (. self.appearances t) (> (. self.appearances t) 1))
             (puts self "#<" id ">")
-            (and (= (# non-seq-keys) 0) (= (# t) 0))
+            (and (= (length non-seq-keys) 0) (= (length t) 0))
             (puts self "{}")
-            (= (# non-seq-keys) 0)
-            (put-sequential-table self t length)
+            (= (length non-seq-keys) 0)
+            (put-sequential-table self t len)
             :else
-            (put-kv-table self t)))))
+            (put-kv-table self t non-seq-keys)))))
 
 (set put-value (fn [self v]
                  (let [tv (type v)]
@@ -146,11 +156,21 @@
 
 
 
+(fn one-line [str]
+  ;; save return value as local to ignore gsub's extra return value
+  (let [ret (-> str
+                (: :gsub "\n" " ")
+                (: :gsub "%[ " "[") (: :gsub " %]" "]")
+                (: :gsub "%{ " "{") (: :gsub " %}" "}")
+                (: :gsub "%( " "(") (: :gsub " %)" ")"))]
+    ret))
+
 (fn fennelview [root options]
   (let [options (or options {})
         inspector {:appearances (count-table-appearances root {})
                    :depth (or options.depth 128)
                    :level 0 :buffer {} :ids {} :max-ids {}
-                   :indent (or options.indent "  ")}]
+                   :indent (or options.indent (if options.one-line "" "  "))}]
     (put-value inspector root)
-    (table.concat inspector.buffer)))
+    (let [str (table.concat inspector.buffer)]
+      (if options.one-line (one-line str) str))))
