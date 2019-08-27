@@ -22,8 +22,8 @@
   (let [goal-hash (utils.hash nav-debug.goal)]
     (for [i 1 state.world.w]
       (for [j 1 state.world.h]
-        (let [dist (-> state.nav.integration (. goal-hash) (. i) (. j))
-              flow (-> state.nav.flow (. goal-hash) (. i) (. j))]
+        (let [dist (-?> state.nav.integration (. goal-hash) (. i) (. j))
+              flow (-?> state.nav.flow (. goal-hash) (. i) (. j))]
           (when flow
             (love.graphics.setColor [0 1 0 0.7])
             (draw.shape {:shape :polygon
