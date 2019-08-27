@@ -60,8 +60,8 @@
 (fn nav.integration
   [state request]
   (nav.integration-init state request)
-    (while (fu.not-empty? request.open)
-      (nav.integration-step state request)))
+  (while (fu.not-empty? request.open)
+    (nav.integration-step state request)))
 
 (fn nav.flow
   [state request]
