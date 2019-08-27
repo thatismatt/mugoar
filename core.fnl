@@ -37,8 +37,8 @@
   (when (and state.debug.overlay state.debug.overlay.init)
     (state.debug.overlay.init state)))
 
-;; (core.init (require "level.units"))
-(core.init (require "level.small"))
+(core.init (require "level.units"))
+;; (core.init (require "level.small"))
 
 (fn love.load []
   (repl.start))
