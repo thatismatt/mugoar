@@ -25,7 +25,7 @@
            :hud {:w 400
                  :visible? false}
            :level {}
-           :debug {:draw-bounding-box? false
+           :debug {;; TODO :draw-bounding-shape?
                    :draw-fps? false
                    :overlay nav-debug}})
   (world.init state 20 10) ;; TODO: move world dimensions to level

@@ -1,27 +1,27 @@
 (local units (require "units"))
 (local utils (require "utils"))
-(local bump (require "lib.bump"))
+(local splash (require "lib.splash"))
 
 (local world {})
 
 (fn world.init [state w h]
-  (let [world (bump.newWorld)]
+  (let [physics (splash.new)]
     ;; world edges
-    (: world :add {} -1 -1 1 (+ h 2)) ;; left
-    (: world :add {}  w -1 1 (+ h 2)) ;; right
-    (: world :add {} -1 -1 (+ w 2) 1) ;; top
-    (: world :add {} -1  h (+ w 2) 1) ;; bottom
+    (: physics :add {} (splash.seg 0 0 0 h)) ;; left
+    (: physics :add {} (splash.seg w 0 0 h)) ;; right
+    (: physics :add {} (splash.seg 0 0 w 0)) ;; top
+    (: physics :add {} (splash.seg 0 h w 0)) ;; bottom
     (set state.world
-         {:physics world
+         {:physics physics
           :w w
           :h h})))
 
+;; TODO: should this be aware of the shape we are adding?
 (fn world.add [state entity coords]
   (set entity.id (.. entity.unit "-" (utils.random-string 10)))
   (let [[x y] coords
-        unit (. units entity.unit)
-        [w h] unit.size]
-    (: state.world.physics :add entity x y w h)
+        unit (. units entity.unit)]
+    (: state.world.physics :add entity (splash.circle x y (/ unit.size 2)))
     (tset state.entities entity.id entity)))
 
 (fn world.remove [state id]
@@ -30,7 +30,7 @@
     (: state.world.physics :remove entity)))
 
 (fn world.move [state dt entity on-collide]
-  (let [(x y) (: state.world.physics :getRect entity)
+  (let [(x y) (: state.world.physics :pos entity)
         new-x (+ x (* (math.cos entity.heading) entity.speed dt))
         new-y (+ y (* (math.sin entity.heading) entity.speed dt))]
     (: state.world.physics :move entity new-x new-y on-collide)))
@@ -49,13 +49,14 @@
     t))
 
 (fn world.position [state entity]
-  [(: state.world.physics :getRect entity)])
+  [(: state.world.physics :pos entity)])
 
 (fn world.query-rect [state x y w h]
-  (-> (: state.world.physics :queryRect x y w h)
+  (-> (: state.world.physics :queryShape (splash.aabb x y w h))
       (lume.filter :id))) ;; remove non id-ed "rects" i.e. world edges
 
-(fn world.query-point [state x y d]
-  (world.query-rect state (- x d) (- y d) (* 2 d) (* 2 d)))
+(fn world.query-point [state x y r]
+  (-> (: state.world.physics :queryShape (splash.circle x y r))
+      (lume.filter :id)))
 
 world

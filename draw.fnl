@@ -29,19 +29,13 @@
 
 (fn draw.object [state unit colour [x y] selected?]
   (love.graphics.setColor colour)
-  (let [transform (love.math.newTransform 0 0  0 1 1 (- x) (- y))
-        [w h] unit.size]
-    (when state.debug.draw-bounding-box?
-      (love.graphics.setLineWidth 0.1)
-      (love.graphics.line (-> [[0 0] [0 h] [w h] [w 0] [0 0]]
-                              (lume.map (fn [pt] [(: transform :transformPoint (unpack pt))]))
-                              (lume.reduce lume.concat))))
-    (lume.map unit.shapes (fn [s] (draw.shape s [x y])))
+  (let [transform (love.math.newTransform 0 0  0 1 1 (- x) (- y))]
+    ;; TODO: implement state.debug.draw-bounding-shape?
+    (lume.map unit.shapes (fn [s] (draw.shape s [(- x (/ unit.size 2)) (- y (/ unit.size 2))])))
     (when selected?
       (love.graphics.setColor [1 1 1 0.5])
       (love.graphics.setLineWidth 0.1)
-      (let [(cx cy) (: transform :transformPoint (/ w 2) (/ h 2))]
-        (love.graphics.ellipse :line cx cy (/ w 2) (/ h 2) 12)))))
+      (love.graphics.ellipse :line x y (/ unit.size 2) (/ unit.size 2) 12))))
 
 (fn draw.entities [state]
   (-> state.entities
@@ -62,7 +56,6 @@
     (let [padding 10
           entity (. state.entities entity-id)
           unit (. units entity.unit)
-          [uw uh] unit.size
           scale (/ (- state.hud.w (* 2 padding)) 4)]
       ;; draw unit name
       (love.graphics.setFont (love.graphics.newFont 36))
@@ -77,7 +70,7 @@
       (love.graphics.push)
       (love.graphics.translate (+ padding
                                   (* (- i 1) scale 0.5)
-                                  (* (- 2 (/ uw 2)) scale)) ;; center the unit
+                                  (* (- 2 (/ unit.size 2)) scale)) ;; center the unit
                                (- 100 ;; HACK: account for units that exceed their bbox
                                   (* (- i 1) scale 0.1)))
       (love.graphics.scale scale)

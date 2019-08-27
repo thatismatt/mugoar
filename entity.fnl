@@ -35,17 +35,13 @@
             [flow-x flow-y] (entity.flow-at state e destination-hash [cx cy])]
         [(- flow-x 0.5) (- flow-y 0.5)])))
 
-(fn rect-mid
-  [[rx ry] [w h]]
-  [(+ rx (/ w 2)) (+ ry (/ h 2))])
-
 (fn entity.update-entities [state]
   (-> state.entities
       (lume.filter (fn [e] (-?> e.commands (fu.not-empty?))))
       (lume.map (fn [e]
                   (let [unit (. units e.unit)
                         destination-pt (lume.first e.commands)
-                        [cur-x cur-y] (rect-mid (world.position state entity) unit.size)
+                        [cur-x cur-y] (world.position state e)
                         [px py] (entity.waypoint state e destination-pt [cur-x cur-y])
                         [dx dy] [(- px cur-x) (- py cur-y)]]
                     (if (< (utils.euclidean destination-pt [cur-x cur-y]) 0.01)
