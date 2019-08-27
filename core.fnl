@@ -24,7 +24,7 @@
            :selection {} ;; entity-id -> true (i.e. a set)
            :hud {:w 400
                  :visible? false}
-           :level (require (.. "level." level))
+           :level level
            :debug {;; TODO :draw-bounding-shape?
                    :draw-fps? false
                    :overlay nav-debug}})
@@ -37,8 +37,8 @@
   (when (and state.debug.overlay state.debug.overlay.init)
     (state.debug.overlay.init state)))
 
-;; (core.init "units")
-(core.init "small")
+;; (core.init (require "level.units"))
+(core.init (require "level.small"))
 
 (fn love.load []
   (repl.start))
