@@ -24,23 +24,21 @@
            :selection {} ;; entity-id -> true (i.e. a set)
            :hud {:w 400
                  :visible? false}
-           :level {}
+           :level (require (.. "level." level))
            :debug {;; TODO :draw-bounding-shape?
                    :draw-fps? false
                    :overlay nav-debug}})
-  (world.init state 20 10) ;; TODO: move world dimensions to level
+  (world.init state)
   (camera.init state)
   (nav.init state)
   (core.window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
-  (when level
-    (set state.level (require (.. "level." level)))
-    (when state.level.init
-      (state.level.init state)))
+  (when state.level.init
+    (state.level.init state))
   (when (and state.debug.overlay state.debug.overlay.init)
     (state.debug.overlay.init state)))
 
-;; (core.init)
-(core.init "units")
+;; (core.init "units")
+(core.init "small")
 
 (fn love.load []
   (repl.start))

@@ -3,7 +3,7 @@
 (local utils (require "utils"))
 
 (local nav-debug
-       {:goal [13 8]
+       {:goal [1 1]
         :arrows {:N  [[0.4 0.8] [0.6 0.8] [0.5 0.2]]
                  :NE [[0.7 0.3] [0.4 0.8] [0.2 0.6]]
                  :E  [[0.2 0.4] [0.2 0.6] [0.8 0.5]]

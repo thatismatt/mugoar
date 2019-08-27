@@ -4,8 +4,10 @@
 
 (local world {})
 
-(fn world.init [state w h]
-  (let [physics (splash.new)]
+(fn world.init [state]
+  (let [physics (splash.new)
+        w state.level.width
+        h state.level.height]
     ;; world edges
     (: physics :add {} (splash.seg 0 0 0 h)) ;; left
     (: physics :add {} (splash.seg w 0 0 h)) ;; right

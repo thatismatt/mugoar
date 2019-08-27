@@ -1,6 +1,8 @@
 (local world (require "world"))
 
-(local level {:name :units})
+(local level {:name :units
+              :width 20
+              :height 10})
 
 (fn level.init
   [state]
