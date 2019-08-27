@@ -81,12 +81,16 @@
                       (set entity.commands [pt])))))))
 
 (fn core.mouse-pressed [state button wx wy]
-  (let [selection (-> (world.query-point state wx wy 0.2)
+  (let [outside? (or (< wx 0) (< wy 0)
+                     (> wx state.world.w) (> wy state.world.h))
+        selection (-> (world.query-point state wx wy 0.2)
                       (lume.map :id))
         old-n (lume.count state.selection)
         new-n (lume.count selection)
         shift? (love.keyboard.isDown "lshift" "rshift")]
-    (if (and (not (= old-n 0))
+    (if outside?
+        nil
+        (and (not (= old-n 0))
              (= new-n 0))
         (core.entity-action state [wx wy] shift?)
         (and shift?
