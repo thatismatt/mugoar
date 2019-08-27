@@ -34,7 +34,8 @@
   (core.window-resize state (love.graphics.getWidth) (love.graphics.getHeight))
   (when level
     (set state.level (require (.. "level." level)))
-    (if state.level.init (state.level.init state)))
+    (when state.level.init
+      (state.level.init state)))
   (when (and state.debug.overlay state.debug.overlay.init)
     (state.debug.overlay.init state)))
 
